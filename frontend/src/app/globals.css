@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Violeta "neón" de Next Level */
+  --color-marca: oklch(0.55 0.24 292);
+  --color-marca-oscuro: oklch(0.45 0.22 292);
+  --color-marca-claro: oklch(0.95 0.04 292);
+  --color-neon: oklch(0.86 0.18 165);
+}
+
+/* Texto HTML que viene de WordPress (descripciones, páginas). */
+.contenido-wp {
+  @apply text-neutral-700 leading-relaxed;
+}
+.contenido-wp > * + * {
+  @apply mt-4;
+}
+.contenido-wp h2 {
+  @apply text-xl font-semibold text-neutral-900 mt-8;
+}
+.contenido-wp h3 {
+  @apply text-lg font-semibold text-neutral-900 mt-6;
+}
+.contenido-wp ul {
+  @apply list-disc pl-6;
+}
+.contenido-wp ol {
+  @apply list-decimal pl-6;
+}
+.contenido-wp a {
+  @apply text-marca underline underline-offset-2;
+}
+.contenido-wp img {
+  @apply rounded-lg;
+}
