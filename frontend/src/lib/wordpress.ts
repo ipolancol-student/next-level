@@ -3,7 +3,8 @@
  * video: "Inicio", "Sobre nosotros", "Política de privacidad", etc.
  * Si tienes Yoast SEO activo, también trae el título y la descripción SEO.
  */
-import { WP_URL } from './woo';
+import { cacheLife, cacheTag } from 'next/cache';
+import { env } from './env';
 
 export interface PaginaWP {
   titulo: string;
@@ -12,18 +13,24 @@ export interface PaginaWP {
 }
 
 export async function getPagina(slug: string): Promise<PaginaWP | null> {
-  if (!WP_URL) return null;
+  'use cache';
+  cacheTag('paginas');
+
   try {
-    const res = await fetch(`${WP_URL}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}`);
-    if (!res.ok) return null;
-    const [pagina] = await res.json();
-    if (!pagina) return null;
-    return {
-      titulo: pagina.title.rendered,
-      contenido: pagina.content.rendered,
-      seo: pagina.yoast_head_json ?? {}
-    };
+    const res = await fetch(`${env().WP_URL}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}`, {
+      signal: AbortSignal.timeout(15000)
+    });
+    if (res.ok) {
+      const [pagina] = await res.json();
+      cacheLife('hours'); // respuesta válida (exista o no la página)
+      return pagina
+        ? { titulo: pagina.title.rendered, contenido: pagina.content.rendered, seo: pagina.yoast_head_json ?? {} }
+        : null;
+    }
   } catch {
-    return null;
+    /* WordPress no respondió */
   }
+  // Si WordPress falló, no guardamos el "sin página" por horas: reintentamos pronto.
+  cacheLife('seconds');
+  return null;
 }

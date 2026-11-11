@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { TIENDA } from '@/lib/config';
 import { getProductos, limpiarHtml, type Producto } from '@/lib/woo';
 import { getPagina } from '@/lib/wordpress';
@@ -91,6 +92,8 @@ async function Portada() {
 }
 
 async function Destacados() {
+  // Se arma en cada visita (con datos en caché): así el build no depende de que WordPress esté encendido.
+  await connection();
   let juegos: Producto[];
   let accesorios: Producto[];
   try {
@@ -123,7 +126,7 @@ function Seccion({ titulo, enlace, productos }: { titulo: string; enlace: string
         <Link href={enlace} className="text-sm font-medium text-marca hover:underline">Ver todos →</Link>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {productos.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+        {productos.map((p, i) => <TarjetaProducto key={p.id} producto={p} prioridad={i < 4} />)}
       </div>
     </section>
   );

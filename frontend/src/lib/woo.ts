@@ -1,121 +1,36 @@
 /**
  * Cliente de la WooCommerce Store API (/wp-json/wc/store/v1).
  *
- * Es la API pública que WooCommerce usa para su propio carrito y checkout:
- * no necesita claves ni plugins extra. Todas las llamadas se hacen desde el
- * servidor de Next.js (Server Components y Server Actions), nunca desde el
- * navegador, así no hay problemas de CORS y la URL de WordPress no queda expuesta.
- *
- * El carrito de cada visitante se identifica con un "Cart-Token" que devuelve
- * WooCommerce. Lo guardamos en una cookie httpOnly llamada "cart_token".
+ * - Todas las llamadas se hacen desde el servidor de Next.js (Server Components,
+ *   Server Actions y Route Handlers), nunca desde el navegador: no hay CORS y la
+ *   URL de WordPress no queda expuesta.
+ * - El CATÁLOGO se guarda en caché ('use cache' + etiqueta "catalogo"). WordPress
+ *   avisa a /api/revalidar cuando cambia un producto o su stock y la caché se
+ *   invalida al instante (ver tienda-headless.php).
+ * - El CARRITO nunca se guarda en caché: es de cada visitante y se identifica con
+ *   el "Cart-Token" de WooCommerce, guardado en una cookie httpOnly.
  */
 import { cookies } from 'next/headers';
+import { cacheLife, cacheTag } from 'next/cache';
+import { env } from './env';
+import { limpiarHtml } from './producto';
+import type { Carrito, Categoria, DatosCliente, EstadoPedido, Producto, ResultadoCheckout } from './tipos';
 
-export const WP_URL = (process.env.WP_URL ?? '').replace(/\/+$/, '');
-const STORE_API = `${WP_URL}/wp-json/wc/store/v1`;
+export * from './tipos';
+export { formatearPrecio } from './dinero';
+export { limpiarHtml, plataformaDe, categoriaPrincipal, esVideojuego, NOMBRES_PAGO } from './producto';
+
 const CART_COOKIE = 'cart_token';
+const TIEMPO_MAXIMO_MS = 15000;
 
-/* ---------- Tipos (solo los campos que usa la tienda) ---------- */
-
-export interface Moneda {
-  currency_code: string;
-  currency_symbol: string;
-  currency_minor_unit: number;
-  currency_decimal_separator: string;
-  currency_thousand_separator: string;
-  currency_prefix: string;
-  currency_suffix: string;
-}
-
-export interface Imagen {
-  id: number;
-  src: string;
-  thumbnail: string;
-  alt: string;
-}
-
-export interface Categoria {
-  id: number;
-  name: string;
-  slug: string;
-  parent?: number;
-  count?: number;
-}
-
-export interface Etiqueta {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-export interface Producto {
-  id: number;
-  name: string;
-  slug: string;
-  type: string;
-  short_description: string;
-  description: string;
-  on_sale: boolean;
-  prices: Moneda & { price: string; regular_price: string; sale_price: string };
-  images: Imagen[];
-  categories: Categoria[];
-  tags: Etiqueta[];
-  is_in_stock: boolean;
-  is_purchasable: boolean;
-  stock_availability?: { text: string };
-  add_to_cart: { minimum: number; maximum: number };
-}
-
-export interface ItemCarrito {
-  key: string;
-  id: number;
-  name: string;
-  quantity: number;
-  images: Imagen[];
-  prices: Moneda & { price: string };
-  totals: Moneda & { line_total: string };
-}
-
-export interface Carrito {
-  items: ItemCarrito[];
-  items_count: number;
-  needs_shipping: boolean;
-  payment_methods: string[];
-  totals: Moneda & {
-    total_items: string;
-    total_shipping: string | null;
-    total_tax: string;
-    total_price: string;
-  };
-}
-
-export interface DatosCliente {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  address_1: string;
-  city: string;
-  state: string;
-  postcode: string;
-  country: string;
-}
-
-export interface ResultadoCheckout {
-  order_id: number;
-  order_key: string;
-  status: string;
-  payment_result: {
-    payment_status: string;
-    redirect_url: string;
-  };
-}
+export const ETIQUETA_CATALOGO = 'catalogo';
 
 /* ---------- Errores ---------- */
 
 export class WooError extends Error {
   constructor(message: string, public status = 500) {
     super(message);
+    this.name = 'WooError';
   }
 }
 
@@ -128,9 +43,16 @@ interface Opciones {
   conCarrito?: boolean;
 }
 
+function storeApi() {
+  return `${env().WP_URL}/wp-json/wc/store/v1`;
+}
+
 async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = false }: Opciones = {}) {
-  if (!WP_URL) {
-    throw new WooError('Falta la variable WP_URL en el archivo .env.local', 0);
+  let wpUrl: string;
+  try {
+    wpUrl = env().WP_URL;
+  } catch (e) {
+    throw new WooError((e as Error).message, 0);
   }
 
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -148,13 +70,14 @@ async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = 
 
   let res: Response;
   try {
-    res = await fetch(`${STORE_API}${ruta}`, {
+    res = await fetch(`${storeApi()}${ruta}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS)
     });
   } catch {
-    throw new WooError(`No se pudo conectar con WordPress en ${WP_URL}`, 0);
+    throw new WooError(`No se pudo conectar con WordPress en ${wpUrl}`, 0);
   }
 
   // WooCommerce devuelve (o renueva) el token del carrito en cada respuesta.
@@ -199,11 +122,25 @@ async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = 
 /** Pide un carrito vacío a WooCommerce y devuelve su Cart-Token. */
 async function crearCartToken() {
   try {
-    const res = await fetch(`${STORE_API}/cart`, { headers: { Accept: 'application/json' } });
+    const res = await fetch(`${storeApi()}/cart`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS)
+    });
     return res.headers.get('Cart-Token') ?? undefined;
   } catch {
     return undefined; // el POST siguiente mostrará el error de conexión
   }
+}
+
+/**
+ * Lecturas del catálogo en caché. Se comparten entre todos los visitantes,
+ * por eso nunca usan cookies. Los errores no se guardan en caché.
+ */
+async function catalogoFetch<T>(ruta: string) {
+  'use cache';
+  cacheTag(ETIQUETA_CATALOGO);
+  cacheLife('hours');
+  return storeFetch<T>(ruta);
 }
 
 /* ---------- Catálogo ---------- */
@@ -212,25 +149,49 @@ export async function getProductos({
   pagina = 1,
   porPagina = 12,
   categoria,
-  buscar
-}: { pagina?: number; porPagina?: number; categoria?: string; buscar?: string } = {}) {
+  buscar,
+  orden
+}: { pagina?: number; porPagina?: number; categoria?: string; buscar?: string; orden?: 'date' | 'price' | 'popularity' } = {}) {
   const params = new URLSearchParams({ page: String(pagina), per_page: String(porPagina) });
   if (categoria) params.set('category', categoria);
   if (buscar) params.set('search', buscar);
+  if (orden) {
+    params.set('orderby', orden);
+    params.set('order', orden === 'price' ? 'asc' : 'desc');
+  }
 
-  const { datos, totalPaginas } = await storeFetch<Producto[]>(`/products?${params}`);
+  const { datos, totalPaginas } = await catalogoFetch<Producto[]>(`/products?${params}`);
   return { productos: datos, totalPaginas };
 }
 
 export async function getProducto(slug: string) {
-  const { datos } = await storeFetch<Producto[]>(`/products?slug=${encodeURIComponent(slug)}`);
+  const { datos } = await catalogoFetch<Producto[]>(`/products?slug=${encodeURIComponent(slug)}`);
   return datos[0] ?? null;
 }
 
+/** Detalle de cada variación (precio, stock) de un producto variable. */
+export async function getVariaciones(producto: Pick<Producto, 'variations'>) {
+  const respuestas = await Promise.all(
+    producto.variations.map((v) => catalogoFetch<Producto>(`/products/${v.id}`))
+  );
+  return respuestas.map((r) => r.datos);
+}
+
 export async function getCategorias() {
-  const { datos } = await storeFetch<Categoria[]>('/products/categories?hide_empty=true');
+  const { datos } = await catalogoFetch<Categoria[]>('/products/categories?hide_empty=true');
   // "Sin categorizar" es la categoría por defecto de WooCommerce: no aporta en el menú.
   return datos.filter((c) => c.slug !== 'uncategorized' && c.slug !== 'sin-categorizar');
+}
+
+/** Todos los productos (para el sitemap). La Store API devuelve como máximo 100 por página. */
+export async function getTodosLosProductos() {
+  const primera = await catalogoFetch<Producto[]>('/products?per_page=100&page=1');
+  const resto = await Promise.all(
+    Array.from({ length: Math.max(0, primera.totalPaginas - 1) }, (_, i) =>
+      catalogoFetch<Producto[]>(`/products?per_page=100&page=${i + 2}`)
+    )
+  );
+  return [primera, ...resto].flatMap((r) => r.datos);
 }
 
 /* ---------- Carrito ---------- */
@@ -246,6 +207,7 @@ export async function getCarritoSiExiste() {
   }
 }
 
+/** `id` puede ser un producto simple o una variación (p. ej. la edición de coleccionista). */
 export async function agregarAlCarrito(id: number, quantity: number) {
   const { datos } = await storeFetch<Carrito>('/cart/add-item', {
     method: 'POST',
@@ -273,7 +235,7 @@ export async function quitarItem(key: string) {
   return datos;
 }
 
-/* ---------- Checkout ---------- */
+/* ---------- Checkout y pedidos ---------- */
 
 export async function realizarPedido(cliente: DatosCliente, metodoPago: string, nota = '') {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -285,7 +247,10 @@ export async function realizarPedido(cliente: DatosCliente, metodoPago: string, 
       billing_address: cliente,
       shipping_address: envio,
       payment_method: metodoPago,
-      customer_note: nota
+      customer_note: nota,
+      // La pasarela de pago usa este origen para devolver al cliente a ESTA tienda
+      // (WordPress solo lo acepta si está en su lista de orígenes permitidos).
+      payment_data: [{ key: 'nextlevel_origen', value: env().SITE_URL }]
     }
   });
   // El pedido ya existe; empezamos un carrito nuevo.
@@ -293,59 +258,20 @@ export async function realizarPedido(cliente: DatosCliente, metodoPago: string, 
   return datos;
 }
 
-/* ---------- Utilidades ---------- */
-
-/** La Store API manda los precios en la unidad mínima ("12990" = 129,90). */
-export function formatearPrecio(monto: string | null | undefined, moneda: Moneda) {
-  const valor = Number(monto ?? 0) / 10 ** moneda.currency_minor_unit;
-  const [entero, decimales] = valor.toFixed(moneda.currency_minor_unit).split('.');
-  const conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, moneda.currency_thousand_separator);
-  const numero = decimales ? `${conMiles}${moneda.currency_decimal_separator}${decimales}` : conMiles;
-  return `${moneda.currency_prefix}${numero}${moneda.currency_suffix}`;
+/**
+ * Estado de un pedido desde el endpoint propio de WordPress. Requiere la clave
+ * del pedido (order_key), que solo conoce quien hizo la compra. Si el pedido se
+ * pagó con tarjeta, WordPress consulta a Recurrente antes de responder.
+ */
+export async function getEstadoPedido(id: number, clave: string): Promise<EstadoPedido | null> {
+  const url = `${env().WP_URL}/wp-json/nextlevel/v1/pedidos/${id}?key=${encodeURIComponent(clave)}`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS) });
+  } catch {
+    throw new WooError(`No se pudo conectar con WordPress en ${env().WP_URL}`, 0);
+  }
+  if (res.status === 404 || res.status === 403) return null;
+  if (!res.ok) throw new WooError(`Error ${res.status} al consultar el pedido`, res.status);
+  return (await res.json()) as EstadoPedido;
 }
-
-export function limpiarHtml(html: string) {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    // Entidades numéricas que WordPress usa mucho: &#8211; (–), &#8217; (’)…
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .trim();
-}
-
-/* ---------- Plataformas (etiquetas de producto) ---------- */
-
-export type Plataforma = 'ps5' | 'xbox' | 'switch' | 'switch-2' | 'multiplataforma';
-
-/** La plataforma sale de la etiqueta del producto (PS5, Xbox, Switch, Switch 2, Multiplataforma). */
-export function plataformaDe(producto: Pick<Producto, 'tags'>): { id: Plataforma; nombre: string } {
-  const etiqueta = producto.tags?.find((t) =>
-    ['ps5', 'xbox', 'switch', 'switch-2', 'multiplataforma'].includes(t.slug)
-  );
-  return etiqueta
-    ? { id: etiqueta.slug as Plataforma, nombre: etiqueta.name }
-    : { id: 'multiplataforma', nombre: 'Multiplataforma' };
-}
-
-const CATEGORIAS_PADRE = ['videojuegos', 'accesorios'];
-
-/** La categoría más específica (p. ej. "Controles" en vez de "Accesorios"). */
-export function categoriaPrincipal(producto: Pick<Producto, 'categories'>) {
-  return producto.categories.find((c) => !CATEGORIAS_PADRE.includes(c.slug)) ?? producto.categories[0];
-}
-
-export function esVideojuego(producto: Pick<Producto, 'categories'>) {
-  return producto.categories.some((c) => c.slug === 'videojuegos');
-}
-
-/** Nombres legibles de los métodos de pago más comunes de WooCommerce. */
-export const NOMBRES_PAGO: Record<string, string> = {
-  cod: 'Pago contra entrega',
-  bacs: 'Transferencia bancaria',
-  cheque: 'Cheque',
-  stripe: 'Tarjeta (Stripe)',
-  'ppcp-gateway': 'PayPal'
-};

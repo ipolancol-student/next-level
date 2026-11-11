@@ -5,15 +5,28 @@ import Link from 'next/link';
 import Form from 'next/form';
 import './globals.css';
 import { TIENDA } from '@/lib/config';
+import { env } from '@/lib/env';
 import { ContadorCarrito } from '@/components/ContadorCarrito';
 import { AvisoTipoCambio } from '@/components/AvisoTipoCambio';
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: { default: `${TIENDA.nombre} · ${TIENDA.lema}`, template: `%s · ${TIENDA.nombre}` },
-  description: TIENDA.descripcion
-};
+export function generateMetadata(): Metadata {
+  let base: URL | undefined;
+  try {
+    base = new URL(env().SITE_URL);
+  } catch {
+    /* sin SITE_URL válido: las URLs absolutas se omiten */
+  }
+  return {
+    metadataBase: base,
+    title: { default: `${TIENDA.nombre} · ${TIENDA.lema}`, template: `%s · ${TIENDA.nombre}` },
+    description: TIENDA.descripcion,
+    applicationName: TIENDA.nombre,
+    openGraph: { type: 'website', siteName: TIENDA.nombre, locale: 'es_GT' },
+    twitter: { card: 'summary_large_image' }
+  };
+}
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (

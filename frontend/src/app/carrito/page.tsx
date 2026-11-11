@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- las imágenes vienen de WordPress (ver README) */
+import Image from 'next/image';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { getCarritoSiExiste, formatearPrecio } from '@/lib/woo';
@@ -46,13 +46,20 @@ async function ContenidoCarrito({ searchParams }: { searchParams: Busqueda }) {
             {items.map((item) => (
               <li key={item.key} className="flex gap-4 p-4">
                 {item.images[0] ? (
-                  <img src={item.images[0].thumbnail} alt="" className="size-20 shrink-0 rounded-lg object-cover" />
+                  <div className="relative size-20 shrink-0 overflow-hidden rounded-lg">
+                    <Image src={item.images[0].src} alt="" fill sizes="80px" className="object-cover" />
+                  </div>
                 ) : (
                   <div className="size-20 shrink-0 rounded-lg bg-neutral-100" />
                 )}
                 <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
                   <div className="flex-1">
                     <p className="font-medium" dangerouslySetInnerHTML={{ __html: item.name }} />
+                    {item.variation.length > 0 && (
+                      <p className="text-sm font-medium text-marca">
+                        {item.variation.map((v) => `${v.attribute}: ${v.value}`).join(' · ')}
+                      </p>
+                    )}
                     <p className="text-sm text-neutral-500">{formatearPrecio(item.prices.price, item.prices)} c/u</p>
                   </div>
                   {/* Formularios que llaman directo a Server Actions */}

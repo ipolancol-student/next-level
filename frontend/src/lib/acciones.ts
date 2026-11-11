@@ -5,11 +5,14 @@
  * estas funciones y Next.js se encarga del resto.
  */
 import { redirect } from 'next/navigation';
-import { refresh } from 'next/cache';
-import { agregarAlCarrito, actualizarItem, quitarItem, realizarPedido, type DatosCliente } from './woo';
+import { refresh, updateTag } from 'next/cache';
+import { agregarAlCarrito, actualizarItem, quitarItem, realizarPedido, ETIQUETA_CATALOGO } from './woo';
+import { esquemaCheckout, erroresPorCampo } from './validacion';
 
 export interface EstadoFormulario {
   error?: string;
+  /** Errores por campo, p. ej. { email: 'Escribe un correo válido' }. */
+  errores?: Record<string, string>;
   /** Lo que escribió el cliente, para volver a mostrarlo si hubo un error. */
   valores?: Record<string, string>;
 }
@@ -18,11 +21,21 @@ function mensajeDe(e: unknown, porDefecto: string) {
   return e instanceof Error ? e.message : porDefecto;
 }
 
+/** Entero positivo o null (no se confía en lo que manda el navegador). */
+function entero(valor: FormDataEntryValue | null, min: number, max: number) {
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+
 /* ---------- Carrito ---------- */
 
 export async function agregarAction(_prev: EstadoFormulario, form: FormData): Promise<EstadoFormulario> {
-  const id = Number(form.get('id'));
-  const cantidad = Math.max(1, Number(form.get('cantidad')) || 1);
+  // `id` es el producto simple o la variación elegida (edición / color).
+  const id = entero(form.get('id'), 1, Number.MAX_SAFE_INTEGER);
+  const cantidad = entero(form.get('cantidad'), 1, 99);
+  if (!id) return { error: 'Elige una opción antes de añadir al carrito.' };
+  if (!cantidad) return { error: 'La cantidad debe estar entre 1 y 99.' };
+
   try {
     await agregarAlCarrito(id, cantidad);
   } catch (e) {
@@ -32,8 +45,8 @@ export async function agregarAction(_prev: EstadoFormulario, form: FormData): Pr
 }
 
 export async function actualizarAction(form: FormData) {
-  const key = String(form.get('key'));
-  const cantidad = Math.max(0, Number(form.get('cantidad')) || 0);
+  const key = String(form.get('key') ?? '');
+  const cantidad = entero(form.get('cantidad'), 0, 99) ?? 0;
   try {
     if (cantidad === 0) await quitarItem(key);
     else await actualizarItem(key, cantidad);
@@ -45,7 +58,7 @@ export async function actualizarAction(form: FormData) {
 
 export async function quitarAction(form: FormData) {
   try {
-    await quitarItem(String(form.get('key')));
+    await quitarItem(String(form.get('key') ?? ''));
   } catch (e) {
     redirect(`/carrito?error=${encodeURIComponent(mensajeDe(e, 'No se pudo quitar el producto'))}`);
   }
@@ -54,30 +67,34 @@ export async function quitarAction(form: FormData) {
 
 /* ---------- Checkout ---------- */
 
-const CAMPOS: (keyof DatosCliente)[] = [
-  'first_name', 'last_name', 'email', 'phone', 'address_1', 'city', 'state', 'postcode', 'country'
-];
-
 export async function checkoutAction(_prev: EstadoFormulario, form: FormData): Promise<EstadoFormulario> {
-  const cliente = Object.fromEntries(
-    CAMPOS.map((k) => [k, String(form.get(k) ?? '').trim()])
-  ) as unknown as DatosCliente;
-  const metodoPago = String(form.get('payment_method') ?? '');
-  const nota = String(form.get('nota') ?? '');
+  const valores = Object.fromEntries(
+    [...form.entries()].filter(([k, v]) => !k.startsWith('$') && typeof v === 'string')
+  ) as Record<string, string>;
 
+  // 1. Validación en el servidor (nunca confiar solo en la del navegador).
+  const resultado = esquemaCheckout.safeParse(valores);
+  if (!resultado.success) {
+    return { error: 'Revisa los campos marcados.', errores: erroresPorCampo(resultado.error), valores };
+  }
+  const { payment_method, nota, ...cliente } = resultado.data;
+
+  // 2. WooCommerce crea el pedido. Con tarjeta, devuelve la URL de pago de Recurrente.
   let destino: string;
   try {
-    const pedido = await realizarPedido(cliente, metodoPago, nota);
-    const { payment_status, redirect_url } = pedido.payment_result;
-    // Pasarelas externas (PayPal, etc.) devuelven una URL a la que hay que enviar al cliente.
-    destino =
-      payment_status !== 'success' && redirect_url ? redirect_url : `/gracias?pedido=${pedido.order_id}`;
+    const pedido = await realizarPedido(cliente, payment_method, nota);
+    const confirmacion = `/pedido/${pedido.order_id}?key=${encodeURIComponent(pedido.order_key)}`;
+    const { redirect_url } = pedido.payment_result;
+    // Si la pasarela pide redirigir a su página de pago, vamos allá. La página de
+    // "pedido recibido" de WordPress no se usa: tenemos la nuestra.
+    destino = redirect_url && !redirect_url.includes('order-received') ? redirect_url : confirmacion;
   } catch (e) {
-    return {
-      error: mensajeDe(e, 'No se pudo crear el pedido'),
-      valores: { ...cliente, payment_method: metodoPago, nota }
-    };
+    return { error: mensajeDe(e, 'No se pudo crear el pedido'), valores };
   }
+
+  // 3. El stock cambió: el catálogo en caché deja de ser válido para todos.
+  updateTag(ETIQUETA_CATALOGO);
+
   // redirect() funciona lanzando una excepción especial: va fuera del try/catch.
   redirect(destino);
 }

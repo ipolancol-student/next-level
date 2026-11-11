@@ -5,8 +5,9 @@
  * del día. Con 'use cache' + cacheLife('hours') Next.js lo consulta como mucho
  * una vez por hora y reutiliza el resultado en todas las páginas.
  */
-import { cacheLife } from 'next/cache';
-import { TIENDA } from './config';
+import { cacheLife, cacheTag } from 'next/cache';
+import { leerTipoCambio } from './banguat';
+import { env } from './env';
 
 const BANGUAT_URL = 'https://www.banguat.gob.gt/variables/ws/TipoCambio.asmx';
 const SOAP = `<?xml version="1.0" encoding="utf-8"?>
@@ -24,6 +25,7 @@ export interface TipoCambio {
 
 export async function getTipoCambio(): Promise<TipoCambio> {
   'use cache';
+  cacheTag('tipo-cambio');
 
   try {
     const res = await fetch(BANGUAT_URL, {
@@ -35,13 +37,10 @@ export async function getTipoCambio(): Promise<TipoCambio> {
       body: SOAP,
       signal: AbortSignal.timeout(8000)
     });
-    const xml = await res.text();
-    const referencia = Number(xml.match(/<referencia>([\d.]+)<\/referencia>/)?.[1]);
-    const fecha = xml.match(/<fecha>([^<]+)<\/fecha>/)?.[1] ?? null;
-
-    if (res.ok && referencia > 0) {
+    const lectura = res.ok ? leerTipoCambio(await res.text()) : null;
+    if (lectura) {
       cacheLife('hours');
-      return { quetzalesPorDolar: referencia, fecha, fuente: 'Banguat' };
+      return { quetzalesPorDolar: lectura.referencia, fecha: lectura.fecha, fuente: 'Banguat' };
     }
   } catch {
     /* Banguat no respondió: usamos el respaldo */
@@ -49,16 +48,5 @@ export async function getTipoCambio(): Promise<TipoCambio> {
 
   // Si falló, lo guardamos poco tiempo para volver a intentarlo pronto.
   cacheLife('minutes');
-  return { quetzalesPorDolar: TIENDA.tipoCambioRespaldo, fecha: null, fuente: 'respaldo' };
-}
-
-const formatoUsd = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-/**
- * Convierte un monto de la Store API (en centavos de quetzal, p. ej. "49900")
- * a dólares con formato: "US$65.33".
- */
-export function aDolares(montoMinimo: string | null | undefined, unidadMinima: number, tipo: TipoCambio) {
-  const quetzales = Number(montoMinimo ?? 0) / 10 ** unidadMinima;
-  return `US$${formatoUsd.format(quetzales / tipo.quetzalesPorDolar)}`;
+  return { quetzalesPorDolar: env().TIPO_CAMBIO_RESPALDO, fecha: null, fuente: 'respaldo' };
 }

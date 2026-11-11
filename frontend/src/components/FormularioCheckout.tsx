@@ -51,6 +51,7 @@ interface Props {
 const campo = 'mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 focus:outline-2 focus:outline-marca';
 
 export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, total, totalUsd }: Props) {
+  // noValidate: la validación la hace el servidor con Zod (mensajes iguales en todos los navegadores).
   // React 19 vacía el formulario después de cada envío. Si WooCommerce rechaza el
   // pedido, la acción devuelve lo que escribió el cliente y lo usamos como valor inicial.
   const [estado, accion, enviando] = useActionState(checkoutAction, {});
@@ -58,9 +59,14 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
   // El país es "controlado" porque el campo de departamento/estado cambia según el país.
   const [pais, setPais] = useState(paisPorDefecto);
   const region = REGIONES[pais];
+  const e = estado.errores ?? {};
+  const [metodo, setMetodo] = useState(v.payment_method ?? metodos[0]?.id);
+  // Marca el campo con error para lectores de pantalla y muestra el mensaje debajo.
+  const err = (campo: string) => ({ 'aria-invalid': Boolean(e[campo]) || undefined, 'aria-describedby': e[campo] ? `error-${campo}` : undefined });
+  const msg = (campo: string) => e[campo] ? <span id={`error-${campo}`} className="mt-1 block text-xs text-red-600">{e[campo]}</span> : null;
 
   return (
-    <form action={accion} className="mt-6 grid gap-8 lg:grid-cols-[1fr_22rem]">
+    <form action={accion} noValidate className="mt-6 grid gap-8 lg:grid-cols-[1fr_22rem]">
       <div className="space-y-6">
         {estado.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{estado.error}</p>
@@ -69,17 +75,17 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
         <fieldset className="rounded-xl border border-neutral-200 bg-white p-5">
           <legend className="px-1 font-semibold">Tus datos</legend>
           <div className="mt-2 grid gap-4 sm:grid-cols-2">
-            <label className="text-sm">Nombre<input name="first_name" defaultValue={v.first_name} required autoComplete="given-name" className={campo} /></label>
-            <label className="text-sm">Apellido<input name="last_name" defaultValue={v.last_name} required autoComplete="family-name" className={campo} /></label>
-            <label className="text-sm">Correo<input name="email" defaultValue={v.email} type="email" required autoComplete="email" className={campo} /></label>
-            <label className="text-sm">Teléfono<input name="phone" defaultValue={v.phone} type="tel" required autoComplete="tel" className={campo} /></label>
+            <label className="text-sm">Nombre<input name="first_name" defaultValue={v.first_name} required autoComplete="given-name" className={campo}  {...err('first_name')} />{msg('first_name')}</label>
+            <label className="text-sm">Apellido<input name="last_name" defaultValue={v.last_name} required autoComplete="family-name" className={campo}  {...err('last_name')} />{msg('last_name')}</label>
+            <label className="text-sm">Correo<input name="email" defaultValue={v.email} type="email" required autoComplete="email" className={campo}  {...err('email')} />{msg('email')}</label>
+            <label className="text-sm">Teléfono<input name="phone" defaultValue={v.phone} type="tel" required autoComplete="tel" className={campo}  {...err('phone')} />{msg('phone')}</label>
           </div>
         </fieldset>
 
         <fieldset className="rounded-xl border border-neutral-200 bg-white p-5">
           <legend className="px-1 font-semibold">Dirección de envío</legend>
           <div className="mt-2 grid gap-4 sm:grid-cols-2">
-            <label className="text-sm sm:col-span-2">Dirección<input name="address_1" defaultValue={v.address_1} required autoComplete="address-line1" placeholder="Calle, número, zona" className={campo} /></label>
+            <label className="text-sm sm:col-span-2">Dirección<input name="address_1" defaultValue={v.address_1} required autoComplete="address-line1" placeholder="Calle, número, zona" className={campo}  {...err('address_1')} />{msg('address_1')}</label>
             <label className="text-sm">
               País
               <select name="country" value={pais} onChange={(e) => setPais(e.target.value)} className={campo}>
@@ -89,22 +95,25 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
             <label className="text-sm">
               {region?.etiqueta ?? 'Provincia / Estado'}
               {region ? (
-                <select name="state" key={`region-${pais}`} defaultValue={v.state ?? ''} required autoComplete="address-level1" className={campo}>
+                <select name="state" key={`region-${pais}`} defaultValue={v.state ?? ''} required autoComplete="address-level1" className={campo} {...err('state')}>
                   <option value="" disabled>Elige una opción</option>
                   {region.opciones.map(([codigo, nombre]) => <option key={codigo} value={codigo}>{nombre}</option>)}
                 </select>
               ) : (
-                <input name="state" key="region-texto" defaultValue={v.state} autoComplete="address-level1" className={campo} />
+                <input name="state" key="region-texto" defaultValue={v.state} autoComplete="address-level1" className={campo} {...err('state')} />
               )}
+              {msg('state')}
             </label>
-            <label className="text-sm">Ciudad / Municipio<input name="city" defaultValue={v.city} required autoComplete="address-level2" className={campo} /></label>
+            <label className="text-sm">Ciudad / Municipio<input name="city" defaultValue={v.city} required autoComplete="address-level2" className={campo}  {...err('city')} />{msg('city')}</label>
             <label className="text-sm">
               Código postal {pais === 'US' ? '' : '(opcional)'}
-              <input name="postcode" defaultValue={v.postcode} required={pais === 'US'} autoComplete="postal-code" className={campo} />
+              <input name="postcode" defaultValue={v.postcode} required={pais === 'US'} autoComplete="postal-code" className={campo} {...err('postcode')} />
+              {msg('postcode')}
             </label>
             <label className="text-sm sm:col-span-2">
               Notas del pedido (opcional)
-              <textarea name="nota" defaultValue={v.nota} rows={2} placeholder="Ej.: entregar en horario de oficina" className={campo} />
+              <textarea name="nota" defaultValue={v.nota} rows={2} placeholder="Ej.: entregar en horario de oficina" className={campo} {...err('nota')} />
+              {msg('nota')}
             </label>
           </div>
         </fieldset>
@@ -118,15 +127,22 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
             </p>
           ) : (
             <div className="mt-2 space-y-2">
-              {metodos.map((m, i) => (
+              {metodos.map((m) => (
                 <label
                   key={m.id}
                   className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-sm has-checked:border-marca has-checked:bg-marca-claro"
                 >
-                  <input type="radio" name="payment_method" value={m.id} defaultChecked={v.payment_method ? v.payment_method === m.id : i === 0} required />
+                  <input type="radio" name="payment_method" value={m.id} checked={metodo === m.id} onChange={() => setMetodo(m.id)} required />
                   {m.nombre}
                 </label>
               ))}
+              {metodo === 'recurrente' && (
+                <p className="rounded-lg bg-marca-claro px-3 py-2 text-xs text-marca-oscuro">
+                  Al confirmar, irás a la página segura de <strong>Recurrente</strong> para pagar con tu tarjeta.
+                  Next Level nunca ve ni guarda los datos de tu tarjeta.
+                </p>
+              )}
+              {msg('payment_method')}
             </div>
           )}
         </fieldset>
@@ -163,7 +179,7 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
           disabled={enviando || metodos.length === 0}
           className="mt-5 w-full rounded-full bg-marca px-6 py-2.5 font-semibold text-white hover:bg-marca-oscuro disabled:opacity-50"
         >
-          {enviando ? 'Procesando…' : 'Confirmar pedido'}
+          {enviando ? 'Procesando…' : metodo === 'recurrente' ? 'Pagar con tarjeta' : 'Confirmar pedido'}
         </button>
         <p className="mt-3 text-xs text-neutral-500">Se cobra en quetzales. Proyecto académico: no se cobra dinero real.</p>
       </aside>

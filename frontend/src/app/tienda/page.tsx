@@ -8,7 +8,14 @@ import { CuadriculaCargando } from '@/components/Cargando';
 
 export const metadata = { title: 'Tienda' };
 
-type Filtros = Promise<{ categoria?: string; buscar?: string; pagina?: string }>;
+type Filtros = Promise<{ categoria?: string; buscar?: string; pagina?: string; orden?: string }>;
+
+const ORDENES = [
+  { id: 'date', nombre: 'Novedades' },
+  { id: 'price', nombre: 'Menor precio' },
+  { id: 'popularity', nombre: 'Más vendidos' }
+] as const;
+type Orden = (typeof ORDENES)[number]['id'];
 
 // Filtros que llegan en la URL: /tienda?categoria=playstation-5&buscar=mario&pagina=2
 export default function Tienda({ searchParams }: { searchParams: Filtros }) {
@@ -24,13 +31,15 @@ async function Catalogo({ searchParams }: { searchParams: Filtros }) {
   const categoria = params.categoria ?? ''; // slug de la categoría
   const buscar = params.buscar?.trim() ?? '';
   const pagina = Math.max(1, Number(params.pagina) || 1);
+  // Solo se aceptan órdenes conocidos (lo demás viene de la URL y no es confiable).
+  const orden: Orden = ORDENES.find((o) => o.id === params.orden)?.id ?? 'date';
 
   let productos: Producto[] = [];
   let categorias: Categoria[] = [];
   let totalPaginas = 1;
   let error: unknown = null;
   try {
-    const [resultado, cats] = await Promise.all([getProductos({ pagina, categoria, buscar }), getCategorias()]);
+    const [resultado, cats] = await Promise.all([getProductos({ pagina, categoria, buscar, orden }), getCategorias()]);
     ({ productos, totalPaginas } = resultado);
     categorias = cats;
   } catch (e) {
@@ -42,11 +51,13 @@ async function Catalogo({ searchParams }: { searchParams: Filtros }) {
   const padres = categorias.filter((c) => !c.parent);
   const hijosDe = (id: number) => categorias.filter((c) => c.parent === id);
 
-  function urlPagina(n: number) {
+  function url(cambios: { pagina?: number; orden?: Orden }) {
     const p = new URLSearchParams();
     if (categoria) p.set('categoria', categoria);
     if (buscar) p.set('buscar', buscar);
-    p.set('pagina', String(n));
+    const o = cambios.orden ?? orden;
+    if (o !== 'date') p.set('orden', o);
+    if (cambios.pagina && cambios.pagina > 1) p.set('pagina', String(cambios.pagina));
     return `/tienda?${p}`;
   }
 
@@ -99,6 +110,20 @@ async function Catalogo({ searchParams }: { searchParams: Filtros }) {
           )}
         </h1>
 
+        <nav aria-label="Ordenar" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-neutral-500">Ordenar:</span>
+          {ORDENES.map((o) => (
+            <Link
+              key={o.id}
+              href={url({ orden: o.id })}
+              aria-current={orden === o.id ? 'page' : undefined}
+              className={`rounded-full px-3 py-1 ${orden === o.id ? 'bg-neutral-950 text-white' : 'border border-neutral-300 hover:bg-white'}`}
+            >
+              {o.nombre}
+            </Link>
+          ))}
+        </nav>
+
         {error ? (
           <div className="mt-6"><AvisoConexion error={error} /></div>
         ) : productos.length === 0 ? (
@@ -112,11 +137,11 @@ async function Catalogo({ searchParams }: { searchParams: Filtros }) {
         {totalPaginas > 1 && (
           <nav className="mt-8 flex items-center justify-center gap-2 text-sm" aria-label="Paginación">
             {pagina > 1 && (
-              <Link href={urlPagina(pagina - 1)} className="rounded-full border px-4 py-1.5 hover:bg-white">← Anterior</Link>
+              <Link href={url({ pagina: pagina - 1 })} className="rounded-full border px-4 py-1.5 hover:bg-white">← Anterior</Link>
             )}
             <span className="px-2 text-neutral-500">Página {pagina} de {totalPaginas}</span>
             {pagina < totalPaginas && (
-              <Link href={urlPagina(pagina + 1)} className="rounded-full border px-4 py-1.5 hover:bg-white">Siguiente →</Link>
+              <Link href={url({ pagina: pagina + 1 })} className="rounded-full border px-4 py-1.5 hover:bg-white">Siguiente →</Link>
             )}
           </nav>
         )}

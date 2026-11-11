@@ -1,8 +1,10 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { getCarritoSiExiste, formatearPrecio, NOMBRES_PAGO } from '@/lib/woo';
+import { getCarritoSiExiste } from '@/lib/woo';
+import { NOMBRES_PAGO } from '@/lib/producto';
+import { formatearPrecio, aDolares } from '@/lib/dinero';
 import { TIENDA } from '@/lib/config';
-import { getTipoCambio, aDolares } from '@/lib/tipoCambio';
+import { getTipoCambio } from '@/lib/tipoCambio';
 import { FormularioCheckout } from '@/components/FormularioCheckout';
 import { BloqueCargando } from '@/components/Cargando';
 
@@ -27,10 +29,13 @@ async function Checkout() {
   return (
     <FormularioCheckout
       paisPorDefecto={TIENDA.paisPorDefecto}
-      metodos={carrito.payment_methods.map((m) => ({ id: m, nombre: NOMBRES_PAGO[m] ?? m }))}
+      // La tarjeta (Recurrente) va primero: es el método que más usan los clientes.
+      metodos={[...carrito.payment_methods]
+        .sort((a, b) => Number(b === 'recurrente') - Number(a === 'recurrente'))
+        .map((m) => ({ id: m, nombre: NOMBRES_PAGO[m] ?? m }))}
       lineas={carrito.items.map((item) => ({
         key: item.key,
-        nombre: item.name,
+        nombre: item.name + (item.variation.length ? ` (${item.variation.map((v) => v.value).join(", ")})` : ""),
         cantidad: item.quantity,
         total: formatearPrecio(item.totals.line_total, item.totals)
       }))}
@@ -40,7 +45,7 @@ async function Checkout() {
           : null
       }
       total={formatearPrecio(carrito.totals.total_price, carrito.totals)}
-      totalUsd={aDolares(carrito.totals.total_price, carrito.totals.currency_minor_unit, await getTipoCambio())}
+      totalUsd={aDolares(carrito.totals.total_price, carrito.totals.currency_minor_unit, (await getTipoCambio()).quetzalesPorDolar)}
     />
   );
 }

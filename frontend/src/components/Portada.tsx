@@ -1,5 +1,6 @@
-/* eslint-disable @next/next/no-img-element -- las imágenes vienen de WordPress (ver README) */
-import { plataformaDe, esVideojuego, limpiarHtml, type Producto } from '@/lib/woo';
+import Image from 'next/image';
+import type { Producto } from '@/lib/tipos';
+import { plataformaDe, esVideojuego, limpiarHtml } from '@/lib/producto';
 
 // Colores de cada plataforma para la portada generada.
 const ESTILOS: Record<string, string> = {
@@ -12,8 +13,10 @@ const ESTILOS: Record<string, string> = {
 
 interface Props {
   producto: Pick<Producto, 'name' | 'images' | 'tags' | 'categories'>;
-  /** Usar la imagen grande (página de producto) en vez de la miniatura. */
+  /** Portada grande (página de producto) en vez de la de la tarjeta. */
   grande?: boolean;
+  /** Prioridad de carga: true para la imagen principal visible al abrir la página (LCP). */
+  prioridad?: boolean;
   className?: string;
 }
 
@@ -22,17 +25,21 @@ interface Props {
  * dibuja una portada con el color de la plataforma (así no usamos carátulas
  * con derechos de autor en el catálogo de prueba).
  */
-export function Portada({ producto, grande = false, className = '' }: Props) {
+export function Portada({ producto, grande = false, prioridad = false, className = '' }: Props) {
   const imagen = producto.images[0];
   const nombre = limpiarHtml(producto.name);
 
   if (imagen) {
+    // next/image genera versiones WebP/AVIF del tamaño justo para cada pantalla.
+    // El contenedor del componente debe ser `relative` y tener tamaño.
     return (
-      <img
-        src={grande ? imagen.src : imagen.thumbnail || imagen.src}
+      <Image
+        src={imagen.src}
         alt={imagen.alt || nombre}
-        loading={grande ? undefined : 'lazy'}
-        className={`size-full object-cover ${className}`}
+        fill
+        sizes={grande ? '(min-width: 768px) 50vw, 100vw' : '(min-width: 1024px) 25vw, 50vw'}
+        preload={prioridad}
+        className={`object-cover ${className}`}
       />
     );
   }
