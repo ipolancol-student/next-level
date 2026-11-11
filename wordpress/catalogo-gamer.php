@@ -30,7 +30,16 @@ update_option('woocommerce_price_thousand_sep', ',');
 update_option('woocommerce_price_decimal_sep', '.');
 update_option('woocommerce_price_num_decimals', '2');
 update_option('woocommerce_manage_stock', 'yes');
-echo "✔ Tienda configurada en quetzales (GTQ)\n";
+update_option('timezone_string', 'America/Guatemala'); // fechas de pedidos en hora de Guatemala
+update_option('date_format', 'j \d\e F \d\e Y');
+
+// Nombres de los métodos de pago como se dicen en Guatemala.
+foreach (['cod' => 'Pago contra entrega', 'bacs' => 'Transferencia bancaria'] as $metodo => $titulo) {
+    $ajustes = get_option("woocommerce_{$metodo}_settings", []);
+    $ajustes['title'] = $titulo;
+    update_option("woocommerce_{$metodo}_settings", $ajustes);
+}
+echo "✔ Tienda configurada en quetzales (GTQ), hora de Guatemala\n";
 
 /* ------------------------------------------------------------------ */
 /* 2. Envíos: Guatemala Q35 (gratis desde Q500), resto del mundo Q350  */
@@ -175,6 +184,24 @@ $productos = [
     ['NL-ACC-006', 'Cable USB-C trenzado de 3 m', ['accesorios', 'carga'], 'Multiplataforma', 79, null, 40, 'Cable largo para jugar mientras cargas el control. Compatible con PS5, Xbox y Switch.'],
     ['NL-ACC-007', 'Tarjeta microSD 256 GB para Nintendo Switch', ['accesorios', 'memoria'], 'Switch', 299, null, 18, 'Amplía el almacenamiento de tu Nintendo Switch para guardar más juegos digitales y capturas.'],
     ['NL-ACC-008', 'Estuche rígido de viaje para Nintendo Switch', ['accesorios', 'estuches'], 'Switch', 159, null, 25, 'Protege tu consola y hasta 10 cartuchos. Compatible con Switch y Switch OLED.'],
+
+    // --- Ampliación del catálogo ---
+    ['NL-PS5-005', "Ghost of Tsushima Director's Cut – PS5", ['videojuegos', 'ps5'], 'PS5', 429, 379, 9, 'Samurái en la isla de Tsushima, con la expansión Iki incluida. Edición física.'],
+    ['NL-PS5-006', 'Ratchet & Clank: Una dimensión aparte – PS5', ['videojuegos', 'ps5'], 'PS5', 349, null, 7, 'Saltos entre dimensiones a toda velocidad gracias al SSD de PS5. Edición física.'],
+    ['NL-PS5-007', 'Returnal – PS5', ['videojuegos', 'ps5'], 'PS5', 299, null, 3, 'Roguelike de disparos en un planeta que cambia en cada ciclo. Edición física.'],
+    ['NL-XBX-004', 'Diablo IV – Xbox Series X|S', ['videojuegos', 'xbox'], 'Xbox', 449, 389, 6, 'El regreso de Lilith al mundo de Santuario. Rol de acción. Edición física.'],
+    ['NL-XBX-005', 'Gears 5 – Xbox One / Series X', ['videojuegos', 'xbox'], 'Xbox', 199, null, 5, 'Acción en tercera persona con campaña cooperativa. Edición física.'],
+    ['NL-NSW-005', 'Super Mario Bros. Wonder – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 459, null, 12, 'Plataformas 2D con la Flor Maravilla que transforma cada nivel. Cartucho físico.'],
+    ['NL-NSW-006', 'Pikmin 4 – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 429, null, 6, 'Estrategia y exploración con los pequeños Pikmin. Cartucho físico.'],
+    ['NL-NSW-007', 'Splatoon 3 – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 429, 379, 8, 'Batallas de tinta en línea 4 contra 4. Cartucho físico.'],
+    ['NL-NSW-008', 'Kirby y la tierra olvidada – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 429, null, 7, 'La primera aventura 3D de Kirby. Cartucho físico.'],
+    ['NL-NSW-009', 'Metroid Dread – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 399, null, 0, 'Samus escapa del planeta ZDR en esta aventura de exploración 2D. Cartucho físico.'],
+    ['NL-ACC-009', 'Funda de silicona para DualSense', ['accesorios', 'estuches'], 'PS5', 99, null, 30, 'Mejor agarre y protección contra golpes y rayones para tu control.'],
+    ['NL-ACC-010', 'Protector de pantalla de vidrio templado para Switch 2', ['accesorios', 'estuches'], 'Switch 2', 89, null, 35, 'Dureza 9H, incluye 2 unidades y kit de instalación.'],
+    ['NL-ACC-011', 'Cargador USB-C de 45 W para Switch y Switch 2', ['accesorios', 'carga'], 'Switch', 189, null, 15, 'Carga rápida en modo portátil y compatible con el modo TV.'],
+    ['NL-ACC-012', 'Disco duro externo 2 TB para PS5 y Xbox', ['accesorios', 'memoria'], 'Multiplataforma', 849, 779, 6, 'Guarda y juega títulos de PS4 y Xbox One; respalda tus juegos de nueva generación.'],
+    ['NL-ACC-013', 'Batería recargable para control Xbox', ['accesorios', 'carga'], 'Xbox', 179, null, 20, 'Hasta 30 horas de juego por carga. Incluye cable USB-C.'],
+    ['NL-ACC-014', 'Volante y pedales para PS5, PS4 y PC', ['accesorios', 'controles'], 'PS5', 2499, 2299, 2, 'Volante con retroalimentación de fuerza para juegos de carreras como Gran Turismo 7.'],
 ];
 
 $creados = 0;
@@ -206,6 +233,109 @@ foreach ($productos as [$sku, $nombre, $categorias, $plataforma, $precio, $ofert
     $creados++;
 }
 echo "✔ Productos creados: {$creados}\n";
+
+/* ------------------------------------------------------------------ */
+/* 5b. Productos con variaciones (edición / color)                     */
+/* ------------------------------------------------------------------ */
+
+/** Crea (si no existe) un atributo global de WooCommerce y sus términos. */
+function nl_atributo($nombre, $slug, array $terminos) {
+    $taxonomia = wc_attribute_taxonomy_name($slug); // pa_{slug}
+    if (!wc_attribute_taxonomy_id_by_name($taxonomia)) {
+        wc_create_attribute(['name' => $nombre, 'slug' => $slug, 'type' => 'select', 'order_by' => 'menu_order']);
+    }
+    // En la misma ejecución la taxonomía aún no está registrada: la registramos a mano.
+    if (!taxonomy_exists($taxonomia)) {
+        register_taxonomy($taxonomia, ['product', 'product_variation'], ['hierarchical' => false]);
+    }
+    foreach ($terminos as $termino_slug => $termino_nombre) {
+        if (!term_exists($termino_slug, $taxonomia)) {
+            wp_insert_term($termino_nombre, $taxonomia, ['slug' => $termino_slug]);
+        }
+    }
+    return $taxonomia;
+}
+
+$pa_edicion = nl_atributo('Edición', 'edicion', [
+    'estandar' => 'Estándar', 'steelbook' => 'Steelbook', 'coleccionista' => 'Coleccionista',
+]);
+$pa_color = nl_atributo('Color', 'color', [
+    'blanco' => 'Blanco', 'negro' => 'Negro', 'rojo' => 'Rojo', 'azul' => 'Azul', 'morado' => 'Morado',
+]);
+echo "✔ Atributos globales: Edición y Color\n";
+
+// [sku, nombre, categorías, plataforma, taxonomía, descripción, [[término, precio, oferta, stock], ...]]
+$variables = [
+    ['NL-PS5-V01', 'Final Fantasy VII Rebirth – PS5', ['videojuegos', 'ps5'], 'PS5', $pa_edicion,
+        'Segunda parte del remake de Final Fantasy VII. Elige la edición estándar, la de estuche metálico o la de coleccionista exclusiva de Next Level (incluye libro de arte y póster).',
+        [['estandar', 499, null, 10], ['steelbook', 579, null, 5], ['coleccionista', 1299, 1199, 2]]],
+    ['NL-PS5-V02', 'Elden Ring Nightreign – PS5', ['videojuegos', 'ps5'], 'PS5', $pa_edicion,
+        'Acción cooperativa para 3 jugadores en el universo de Elden Ring.',
+        [['estandar', 379, null, 8], ['steelbook', 449, null, 4]]],
+    ['NL-NS2-V01', 'Pokémon Legends: Z-A – Nintendo Switch 2', ['videojuegos', 'switch2'], 'Switch 2', $pa_edicion,
+        'Aventura Pokémon en Ciudad Luminalia. Disponible en edición estándar y coleccionista exclusiva de Next Level.',
+        [['estandar', 549, null, 12], ['coleccionista', 999, null, 3]]],
+    ['NL-ACC-V01', 'Control inalámbrico DualSense – Colores', ['accesorios', 'controles'], 'PS5', $pa_color,
+        'Control oficial para PS5 con retroalimentación háptica y gatillos adaptativos, en varios colores.',
+        [['negro', 669, null, 6], ['rojo', 669, 619, 4], ['azul', 669, null, 0], ['morado', 669, null, 3]]],
+    ['NL-ACC-V02', 'Joy-Con (L)/(R) para Nintendo Switch', ['accesorios', 'controles'], 'Switch', $pa_color,
+        'Par de controles Joy-Con con detección de movimiento y vibración HD.',
+        [['rojo', 649, null, 5], ['azul', 649, null, 5], ['morado', 649, 599, 2]]],
+];
+
+$creados = 0;
+foreach ($variables as [$sku, $nombre, $categorias, $plataforma, $taxonomia, $corta, $opciones]) {
+    if (wc_get_product_id_by_sku($sku)) {
+        continue;
+    }
+    $terminos_ids = [];
+    foreach ($opciones as [$slug]) {
+        $terminos_ids[] = (int) get_term_by('slug', $slug, $taxonomia)->term_id;
+    }
+
+    $atributo = new WC_Product_Attribute();
+    $atributo->set_id(wc_attribute_taxonomy_id_by_name($taxonomia));
+    $atributo->set_name($taxonomia);
+    $atributo->set_options($terminos_ids);
+    $atributo->set_visible(true);
+    $atributo->set_variation(true);
+
+    $padre = new WC_Product_Variable();
+    $padre->set_name($nombre);
+    $padre->set_sku($sku);
+    $padre->set_status('publish');
+    $padre->set_short_description("<p>{$corta}</p>");
+    $padre->set_description(
+        "<p>{$corta}</p>"
+        . '<h3>¿Por qué comprar en Next Level?</h3>'
+        . '<ul><li>Producto nuevo y sellado.</li><li>Envío a todo Guatemala (gratis en compras desde Q500).</li>'
+        . '<li>Garantía de 30 días contra defectos de fábrica.</li></ul>'
+    );
+    $padre->set_category_ids(array_map(fn($c) => $cat[$c], $categorias));
+    $padre->set_attributes([$atributo]);
+    $padre->set_default_attributes([$taxonomia => $opciones[0][0]]);
+    $padre->save();
+    wp_set_object_terms($padre->get_id(), [$plataforma], 'product_tag');
+    wp_set_object_terms($padre->get_id(), array_column($opciones, 0), $taxonomia);
+
+    foreach ($opciones as [$slug, $precio, $oferta, $stock]) {
+        $variacion = new WC_Product_Variation();
+        $variacion->set_parent_id($padre->get_id());
+        $variacion->set_attributes([$taxonomia => $slug]);
+        $variacion->set_sku("{$sku}-" . strtoupper($slug));
+        $variacion->set_regular_price((string) $precio);
+        if ($oferta) {
+            $variacion->set_sale_price((string) $oferta);
+        }
+        $variacion->set_manage_stock(true);
+        $variacion->set_stock_quantity($stock);
+        $variacion->set_status('publish');
+        $variacion->save();
+    }
+    WC_Product_Variable::sync($padre->get_id());
+    $creados++;
+}
+echo "✔ Productos con variaciones creados: {$creados}\n";
 
 /* ------------------------------------------------------------------ */
 /* 6. Página "Inicio" (portada del frontend, editable desde el panel)  */
