@@ -20,9 +20,13 @@ tráfico de producción.
 | SEO | Yoast SEO (versión gratuita) | GPL | 0 USD |
 | Frontend | Next.js 16 + React 19 + Tailwind CSS | MIT (software libre) | 0 USD |
 | Lenguaje | TypeScript sobre Node.js | Apache 2.0 / MIT | 0 USD |
-| Pagos (demo) | Contra reembolso / Transferencia (WooCommerce) | Incluidos | 0 USD |
+| Pagos con tarjeta | Recurrente (pasarela guatemalteca), modo sandbox | Sin mensualidad; la prueba no mueve dinero | 0 USD |
+| Otros pagos | Contra entrega / Transferencia (WooCommerce) | Incluidos | 0 USD |
+| Validación de datos | Zod | MIT | 0 USD |
+| Pruebas automáticas | Vitest | MIT | 0 USD |
+| Integración continua | GitHub Actions (repositorio público) | Gratuito e ilimitado en repos públicos | 0 USD |
 | Hosting del frontend | Vercel, plan Hobby | Gratuito (uso no comercial) | 0 USD |
-| URL pública del backend | Cloudflare Tunnel u Oracle Cloud Always Free | Gratuito | 0 USD |
+| URL pública del backend | Cloudflare Tunnel (túnel rápido, sin cuenta) | Gratuito | 0 USD |
 | Editor y versiones | VS Code, Git, GitHub | Gratuitos | 0 USD |
 | **Total** | | | **0 USD** |
 
@@ -38,6 +42,19 @@ tráfico de producción.
 - **Desventajas asumidas:** más complejidad (dos proyectos), hay que manejar SEO y rutas en el
   frontend, y más mantenimiento.
 
+## ¿Por qué Recurrente para los pagos con tarjeta?
+
+| Opción | Disponible para comercios en Guatemala | Cobra en quetzales | Modo de prueba gratis | Decisión |
+|---|---|---|---|---|
+| **Recurrente** | Sí (empresa guatemalteca) | Sí (GTQ y USD) | Sí (claves `sk_test_`, tarjeta 4242…) | **Elegida** |
+| Stripe | No acepta comercios de Guatemala | — | — | Descartada |
+| PayPal | Sí | No (cobra en USD, comisión internacional) | Sí (sandbox) | Alternativa |
+| Pasarelas bancarias (VisaNet, BAC…) | Sí | Sí | Requieren contrato de comercio | Fuera del alcance |
+
+La integración no depende de un plugin de terceros: se programó una pasarela propia de WooCommerce
+(`wordpress/nextlevel-recurrente.php`) contra la API pública de Recurrente, con verificación de la
+firma de los webhooks (Svix) y confirmación del pago por la API antes de marcar el pedido como pagado.
+
 ## ¿Cuándo sí convendría pagar? ¿Era necesario aquí?
 
 | Gasto posible | Precio aproximado | ¿Por qué se pagaría? | ¿Necesario en este proyecto? |
@@ -45,7 +62,7 @@ tráfico de producción.
 | Hosting de WordPress | 3–10 USD/mes | Servidor disponible 24/7, copias de seguridad, SSL, soporte | **No.** La demo funciona en local o con Cloudflare Tunnel; Oracle Free sirve si se exige que esté publicado siempre |
 | Dominio propio (.com) | 10–15 USD/año | Imagen de marca, confianza del cliente | **No.** Basta con `*.vercel.app` |
 | Plugins premium (ACF Pro, Subscriptions…) | 50–300 USD/año | Funciones avanzadas | **No.** Las funciones del proyecto están cubiertas por plugins gratuitos |
-| Comisiones de pasarela (Stripe/PayPal) | ~3 % + fijo por venta | Cobrar con tarjeta | **No.** Solo se cobran en ventas reales; los modos de prueba son gratis |
+| Comisión de la pasarela (Recurrente) | Porcentaje por venta, sin mensualidad | Cobrar con tarjeta en quetzales | **No.** Solo se cobra en ventas reales; el sandbox con tarjetas de prueba es gratis |
 | Correo transaccional | 0–15 USD/mes | Que los correos de pedido no lleguen a spam | **No.** Brevo ofrece 300 correos/día gratis si hiciera falta |
 | Vercel Pro | 20 USD/mes | Uso comercial, más recursos | **No.** El plan Hobby permite proyectos personales y académicos |
 

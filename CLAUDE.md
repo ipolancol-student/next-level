@@ -22,7 +22,9 @@ Para el detalle completo, lee [README.md](README.md).
 | `frontend/` | Next.js 16 (App Router, React 19, Tailwind 4). Lee también [frontend/AGENTS.md](frontend/AGENTS.md) |
 | `frontend/src/lib/woo.ts` | Cliente de la WooCommerce Store API (`/wp-json/wc/store/v1`) |
 | `frontend/src/lib/acciones.ts` | Server Actions: carrito y checkout |
-| `wordpress/tienda-headless.php` | mu-plugin del proyecto (versión oficial, en git) |
+| `wordpress/tienda-headless.php` | mu-plugin: redirecciones, avisos de caché, API de pedidos, seguridad |
+| `wordpress/nextlevel-recurrente.php` | mu-plugin: pasarela de pago Recurrente + webhook Svix |
+| `docs/despliegue.md` | GitHub, Vercel, Cloudflare Tunnel y Recurrente |
 | `wordpress/catalogo-gamer.php` | Configura GTQ y envíos, y carga el catálogo de prueba |
 | `docs/` | Textos para el informe del Seminario |
 
@@ -36,17 +38,19 @@ Para el detalle completo, lee [README.md](README.md).
   dobles se pierden: para PHP escribe un archivo temporal en la carpeta del sitio y ejecuta
   `studio wp eval-file archivo.php` (el PHP de Studio solo ve la carpeta del sitio). Borra el
   archivo al terminar.
-- **Plugin**: edita `wordpress/tienda-headless.php` en el proyecto y luego cópialo a
+- **Plugins**: edita los archivos de `wordpress/` en el proyecto y luego cópialos a
   `C:\Users\isaio\Studio\next-level\wp-content\mu-plugins\`. Nunca edites solo la copia.
 - No edites el núcleo de WordPress (`wp-admin`, `wp-includes`, `wp-*.php`).
 
 ## Comprobaciones
 
 ```bash
-cd frontend && npm run lint && npx tsc --noEmit
+cd frontend && npm run verificar   # lint + tipos + 43 pruebas (igual que la CI)
 ```
 
-`npm run build` no debe ejecutarse mientras `npm run dev` está encendido. Prueba los cambios en el
+Pruebas PHP: copia `wordpress/pruebas/prueba-recurrente.php` al sitio y `studio wp eval-file prueba-recurrente.php`.
+
+`next build` y `next dev` pueden convivir (Next 16 usa `.next/dev`). Prueba los cambios en el
 navegador: catálogo → producto → carrito → checkout, y verifica el pedido con
 `studio wp wc shop_order list --user=1`.
 
@@ -68,3 +72,9 @@ navegador: catálogo → producto → carrito → checkout, y verifica el pedido
 - **Panel del navegador oculto**: el contenido en streaming no aparece porque no hay animation
   frames. Para probar, ejecuta `window.$RV(window.$RB)` en la página. No es un error de la tienda.
 - **WordPress Studio es lento** (1–3 s por petición). No es un problema de rendimiento del frontend.
+- **Pagos**: un pedido con tarjeta se marca pagado SOLO tras confirmar con la API de Recurrente
+  (estado `paid`, monto y moneda). Nunca confiar en la redirección de `success_url`.
+- **Caché**: el catálogo usa `catalogoFetch` (`use cache` + tag `catalogo`); el carrito y los pedidos
+  nunca se cachean. Las páginas que no leen la petición llaman `await connection()` para que el build
+  no dependa de WordPress.
+- **Shell**: no metas backticks de Markdown dentro de `node -e "..."` en bash: se ejecutan como comandos.

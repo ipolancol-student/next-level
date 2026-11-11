@@ -31,17 +31,32 @@ Entra al panel: `http://localhost:8881/wp-admin`.
 Al activar WooCommerce, el asistente te pide datos de la tienda: país, moneda, etc. Puedes saltarlo y
 configurarlo luego en **WooCommerce → Ajustes**.
 
-## 4. Instalar el plugin del proyecto
+## 4. Instalar los plugins del proyecto
 
 1. Abre la carpeta del sitio. En Studio: botón **"Open in… → File explorer"**.
 2. Entra a `wp-content/` y crea la carpeta **`mu-plugins`** si no existe.
-3. Copia ahí el archivo [`tienda-headless.php`](tienda-headless.php).
+3. Copia ahí estos dos archivos:
+   - [`tienda-headless.php`](tienda-headless.php): redirige el sitio público a la tienda, avisa al
+     frontend cuando cambia el catálogo, expone el estado de los pedidos y ajusta la seguridad.
+   - [`nextlevel-recurrente.php`](nextlevel-recurrente.php): pasarela de pago con tarjeta (Recurrente).
+4. Configura la conexión con el frontend (desde la carpeta del sitio):
+
+   ```bash
+   studio wp option update nextlevel_frontend_urls "http://localhost:3000"
+   studio wp option update nextlevel_revalidate_secret "<el mismo REVALIDATE_SECRET de frontend/.env.local>"
+   ```
 
 Ahora, si visitas `http://localhost:8881`, WordPress te manda al frontend (`http://localhost:3000`).
-El panel `/wp-admin` y la API siguen funcionando.
+El panel `/wp-admin` y la API siguen funcionando. La configuración de pagos con tarjeta está en
+[docs/despliegue.md](../docs/despliegue.md#1-pagos-con-tarjeta-recurrente-modo-de-prueba).
 
-> Cuando publiques el frontend, cambia `TIENDA_FRONTEND_URL` dentro del archivo
-> (o defínela en `wp-config.php`).
+### Probar los plugins
+
+Copia [`pruebas/prueba-recurrente.php`](pruebas/prueba-recurrente.php) a la carpeta del sitio y ejecuta:
+
+```bash
+studio wp eval-file prueba-recurrente.php
+```
 
 ## 5. Configurar la tienda
 
@@ -58,7 +73,7 @@ El panel `/wp-admin` y la API siguen funcionando.
 
 **Recomendado:** el script [`catalogo-gamer.php`](catalogo-gamer.php) deja la tienda lista para
 Guatemala: moneda en quetzales, envíos (Q35, gratis desde Q500, internacional Q350), categorías
-de videojuegos y accesorios, 21 productos de prueba y la página "Inicio". Cópialo a la carpeta del
+de videojuegos y accesorios, 42 productos de prueba (37 simples y 5 con variaciones de edición o color) y la página "Inicio". Cópialo a la carpeta del
 sitio y ejecuta:
 
 ```bash
