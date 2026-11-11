@@ -70,6 +70,16 @@ export function opcionesDeVariacion(producto: Pick<Producto, 'attributes' | 'var
   return opciones.length ? { atributo: atributo.name, opciones } : null;
 }
 
+/**
+ * Texto de existencias. WooCommerce en español dice "1 disponibles"; además, pocas
+ * unidades se resaltan para crear urgencia de compra.
+ */
+export function textoStock(texto: string | undefined, quedan: number | null | undefined) {
+  if (quedan === 1) return '¡Última unidad!';
+  if (quedan && quedan <= 3) return `¡Solo quedan ${quedan}!`;
+  return texto?.replace(/^1 disponibles$/, '1 disponible');
+}
+
 /** Nombres legibles de los métodos de pago de WooCommerce. */
 export const NOMBRES_PAGO: Record<string, string> = {
   recurrente: 'Tarjeta de crédito o débito',

@@ -78,3 +78,12 @@ describe('opcionesDeVariacion', () => {
     expect(opcionesDeVariacion({ attributes: atributos, variations: rotas })?.opciones).toHaveLength(3);
   });
 });
+
+describe('textoStock', () => {
+  it('corrige "1 disponibles" y resalta las últimas unidades', async () => {
+    const { textoStock } = await import('./producto');
+    expect(textoStock('1 disponibles', 1)).toBe('¡Última unidad!');
+    expect(textoStock('3 disponibles', 3)).toBe('¡Solo quedan 3!');
+    expect(textoStock('12 disponibles', null)).toBe('12 disponibles');
+  });
+});

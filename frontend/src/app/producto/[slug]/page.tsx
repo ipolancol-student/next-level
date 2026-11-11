@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProducto, getVariaciones, type Producto } from '@/lib/woo';
-import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion } from '@/lib/producto';
+import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion, textoStock } from '@/lib/producto';
 import { formatearPrecio, aDolares } from '@/lib/dinero';
 import { getTipoCambio } from '@/lib/tipoCambio';
 import { env } from '@/lib/env';
@@ -78,7 +78,7 @@ async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }
       precioAntes: v.on_sale ? formatearPrecio(v.prices.regular_price, v.prices) : undefined,
       precioUsd: aDolares(v.prices.price, v.prices.currency_minor_unit, quetzalesPorDolar),
       enStock: v.is_in_stock,
-      stockTexto: v.stock_availability?.text
+      stockTexto: textoStock(v.stock_availability?.text, v.low_stock_remaining)
     }];
   });
   const porDefecto =
@@ -141,7 +141,9 @@ async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }
             <>
               <FormularioCompra tipo="simple" id={producto.id} maximo={producto.add_to_cart.maximum} />
               {producto.stock_availability?.text && (
-                <p className="mt-3 text-sm text-neutral-500">{producto.stock_availability.text}</p>
+                <p className="mt-3 text-sm text-neutral-500">
+                  {textoStock(producto.stock_availability.text, producto.low_stock_remaining)}
+                </p>
               )}
             </>
           ) : (
