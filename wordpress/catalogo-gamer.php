@@ -143,6 +143,13 @@ $cat['xbox']    = nl_categoria('Xbox Series X|S', 'xbox-series', $cat['videojueg
 $cat['switch']  = nl_categoria('Nintendo Switch', 'nintendo-switch', $cat['videojuegos']);
 $cat['switch2'] = nl_categoria('Nintendo Switch 2', 'nintendo-switch-2', $cat['videojuegos']);
 
+$cat['consolas']        = nl_categoria('Consolas', 'consolas', 0, 'Consolas nuevas con garantía.');
+$cat['cons-playstation'] = nl_categoria('Consolas PlayStation', 'consolas-playstation', $cat['consolas']);
+$cat['cons-xbox']        = nl_categoria('Consolas Xbox', 'consolas-xbox', $cat['consolas']);
+$cat['cons-nintendo']    = nl_categoria('Consolas Nintendo', 'consolas-nintendo', $cat['consolas']);
+
+$cat['tarjetas'] = nl_categoria('Tarjetas de regalo', 'tarjetas-de-regalo', 0, 'Tarjetas físicas para recargar tu cuenta de PlayStation, Xbox o Nintendo.');
+
 $cat['accesorios']  = nl_categoria('Accesorios', 'accesorios', 0, 'Controles, audífonos y más para tu consola.');
 $cat['controles']   = nl_categoria('Controles', 'controles', $cat['accesorios']);
 $cat['audifonos']   = nl_categoria('Audífonos', 'audifonos', $cat['accesorios']);
@@ -202,6 +209,46 @@ $productos = [
     ['NL-ACC-012', 'Disco duro externo 2 TB para PS5 y Xbox', ['accesorios', 'memoria'], 'Multiplataforma', 849, 779, 6, 'Guarda y juega títulos de PS4 y Xbox One; respalda tus juegos de nueva generación.'],
     ['NL-ACC-013', 'Batería recargable para control Xbox', ['accesorios', 'carga'], 'Xbox', 179, null, 20, 'Hasta 30 horas de juego por carga. Incluye cable USB-C.'],
     ['NL-ACC-014', 'Volante y pedales para PS5, PS4 y PC', ['accesorios', 'controles'], 'PS5', 2499, 2299, 2, 'Volante con retroalimentación de fuerza para juegos de carreras como Gran Turismo 7.'],
+
+    // --- Ampliación 2: más juegos ---
+    ['NL-PS5-008', "Demon's Souls – PS5", ['videojuegos', 'ps5'], 'PS5', 399, 349, 6, 'El clásico de rol y acción reconstruido desde cero para PS5. Edición física.'],
+    ['NL-PS5-009', 'Horizon Forbidden West – PS5', ['videojuegos', 'ps5'], 'PS5', 399, null, 8, 'Aloy explora un Oeste prohibido lleno de máquinas colosales. Edición física.'],
+    ['NL-PS5-010', 'Stellar Blade – PS5', ['videojuegos', 'ps5'], 'PS5', 499, null, 7, 'Acción con combates ágiles en una Tierra devastada. Edición física.'],
+    ["NL-PS5-011", "Marvel's Spider-Man: Miles Morales – PS5", ['videojuegos', 'ps5'], 'PS5', 299, 249, 10, 'Miles Morales protege Harlem con nuevos poderes. Edición física.'],
+    ['NL-PS5-012', 'Resident Evil 4 – PS5', ['videojuegos', 'ps5'], 'PS5', 399, null, 9, 'El remake del clásico de terror y acción de Capcom. Edición física.'],
+    ['NL-PS5-013', 'Street Fighter 6 – PS5', ['videojuegos', 'ps5'], 'PS5', 349, 299, 6, 'La saga de peleas más icónica con controles modernos y clásicos. Edición física.'],
+    ['NL-PS5-014', 'Mortal Kombat 1 – PS5', ['videojuegos', 'ps5'], 'PS5', 449, null, 5, 'Un universo renacido por Liu Kang. Edición física.'],
+    ['NL-PS5-015', 'Hogwarts Legacy – PS5', ['videojuegos', 'ps5'], 'PS5', 399, null, 11, 'Vive tu propia historia como estudiante de Hogwarts en el siglo XIX. Edición física.'],
+    ['NL-XBX-006', 'Forza Motorsport – Xbox Series X|S', ['videojuegos', 'xbox'], 'Xbox', 449, null, 5, 'Simulación de carreras en circuitos reales con más de 500 autos. Edición física.'],
+    ['NL-XBX-007', 'Indiana Jones y el Gran Círculo – Xbox Series X|S', ['videojuegos', 'xbox'], 'Xbox', 529, null, 6, 'Aventura de acción y exploración por todo el mundo con Indiana Jones. Edición física.'],
+    ['NL-XBX-008', 'Halo: The Master Chief Collection – Xbox One / Series X', ['videojuegos', 'xbox'], 'Xbox', 249, 199, 8, 'Seis juegos de Halo remasterizados en un solo disco. Edición física.'],
+    ['NL-XBX-009', 'Minecraft – Xbox One / Series X', ['videojuegos', 'xbox'], 'Xbox', 199, null, 20, 'Construye, explora y sobrevive en mundos infinitos. Edición física.'],
+    ['NL-XBX-010', 'Elden Ring – Xbox Series X|S', ['videojuegos', 'xbox'], 'Xbox', 449, 399, 4, 'Rol de acción en las Tierras Intermedias, de FromSoftware. Edición física.'],
+    ['NL-NSW-010', 'The Legend of Zelda: Breath of the Wild – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 459, null, 9, 'Explora un Hyrule abierto a tu ritmo. Cartucho físico.'],
+    ['NL-NSW-011', 'Pokémon Escarlata – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 459, null, 10, 'Aventura de mundo abierto en la región de Paldea. Cartucho físico.'],
+    ['NL-NSW-012', 'Mario Party Superstars – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 429, 389, 12, '100 minijuegos y 5 tableros clásicos para jugar en familia. Cartucho físico.'],
+    ["NL-NSW-013", "Luigi's Mansion 3 – Nintendo Switch", ['videojuegos', 'switch'], 'Switch', 429, null, 7, 'Luigi explora un hotel embrujado para rescatar a sus amigos. Cartucho físico.'],
+    ['NL-NSW-014', 'Donkey Kong Country Returns HD – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 399, null, 8, 'Plataformas 2D clásicas en alta definición. Cartucho físico.'],
+    ['NL-NSW-015', 'Minecraft – Nintendo Switch', ['videojuegos', 'switch'], 'Switch', 249, null, 15, 'Construye en cualquier lugar con el modo portátil. Cartucho físico.'],
+    ['NL-NS2-003', 'The Legend of Zelda: Breath of the Wild – Nintendo Switch 2 Edition', ['videojuegos', 'switch2'], 'Switch 2', 549, null, 6, 'Mejoras de resolución y rendimiento para Nintendo Switch 2. Cartucho físico.'],
+    ['NL-NS2-004', 'Cyberpunk 2077: Ultimate Edition – Nintendo Switch 2', ['videojuegos', 'switch2'], 'Switch 2', 599, 549, 5, 'Night City en modo portátil, con la expansión Phantom Liberty. Cartucho físico.'],
+
+    // --- Ampliación 2: más accesorios ---
+    ['NL-ACC-015', 'Pro Controller para Nintendo Switch 2', ['accesorios', 'controles'], 'Switch 2', 699, null, 6, 'Control oficial con botones traseros asignables y conector de audio.'],
+    ['NL-ACC-016', 'Control inalámbrico Xbox Elite Series 2', ['accesorios', 'controles'], 'Xbox', 1499, 1399, 3, 'Control profesional con palancas de tensión ajustable y hasta 40 horas de batería.'],
+    ['NL-ACC-017', 'Audífonos inalámbricos PULSE Elite para PS5', ['accesorios', 'audifonos'], 'PS5', 1299, null, 4, 'Audio planar de alta fidelidad y micrófono retráctil con cancelación de ruido.'],
+    ['NL-ACC-018', 'Audífonos inalámbricos para Xbox', ['accesorios', 'audifonos'], 'Xbox', 899, 799, 5, 'Sonido espacial, conexión inalámbrica y Bluetooth simultáneos.'],
+    ['NL-ACC-019', 'Cámara para Nintendo Switch 2', ['accesorios', 'controles'], 'Switch 2', 449, null, 8, 'Videochat con GameChat y juegos compatibles con cámara.'],
+    ['NL-ACC-020', 'Tarjeta microSD Express 256 GB para Switch 2', ['accesorios', 'memoria'], 'Switch 2', 599, null, 10, 'Formato microSD Express, el que requiere Nintendo Switch 2 para guardar juegos.'],
+    ['NL-ACC-021', 'Estación de carga para 4 Joy-Con', ['accesorios', 'carga'], 'Switch', 199, null, 12, 'Carga hasta cuatro Joy-Con a la vez con indicadores LED.'],
+    ['NL-ACC-022', 'Soporte vertical con ventilación para PS5', ['accesorios', 'carga'], 'PS5', 349, 299, 7, 'Mantiene fresca tu consola y carga dos controles DualSense.'],
+    ['NL-ACC-023', 'Cable HDMI 2.1 de 2 m (4K 120 Hz)', ['accesorios', 'carga'], 'Multiplataforma', 129, null, 25, 'Aprovecha 4K a 120 Hz en PS5 y Xbox Series X.'],
+    ['NL-ACC-024', 'Mochila de viaje para consolas', ['accesorios', 'estuches'], 'Multiplataforma', 449, null, 6, 'Compartimentos acolchados para consola, controles y cables.'],
+    ['NL-ACC-025', 'Kit de limpieza para consolas y controles', ['accesorios', 'estuches'], 'Multiplataforma', 89, null, 30, 'Paños de microfibra, cepillos y solución segura para electrónicos.'],
+    ['NL-ACC-026', 'Disco SSD M.2 de 2 TB con disipador para PS5', ['accesorios', 'memoria'], 'PS5', 1299, 1199, 5, 'Amplía el almacenamiento interno de tu PS5 con velocidades de hasta 7,000 MB/s.'],
+
+    // --- Consolas sin variaciones ---
+    ['NL-CON-003', 'Consola PlayStation 5 Pro (2 TB)', ['consolas', 'cons-playstation'], 'PS5', 6999, null, 3, 'La PlayStation más potente: gráficos mejorados con PSSR, 2 TB de almacenamiento y control DualSense.'],
 ];
 
 $creados = 0;
@@ -262,7 +309,16 @@ $pa_edicion = nl_atributo('Edición', 'edicion', [
 $pa_color = nl_atributo('Color', 'color', [
     'blanco' => 'Blanco', 'negro' => 'Negro', 'rojo' => 'Rojo', 'azul' => 'Azul', 'morado' => 'Morado',
 ]);
-echo "✔ Atributos globales: Edición y Color\n";
+$pa_modelo = nl_atributo('Modelo', 'modelo', [
+    'con-lector-de-discos' => 'Con lector de discos', 'edicion-digital' => 'Edición digital',
+    '1-tb-negra' => '1 TB · Negra', '2-tb-galaxy-black' => '2 TB · Galaxy Black', '512-gb-blanca' => '512 GB · Blanca',
+    'estandar-switch-2' => 'Estándar', 'bundle-mario-kart-world' => 'Bundle Mario Kart World',
+    'oled-blanca' => 'Blanca', 'oled-neon' => 'Neón (rojo/azul)',
+]);
+$pa_monto = nl_atributo('Monto', 'monto', [
+    'us-10' => 'US$10', 'us-20' => 'US$20', 'us-25' => 'US$25', 'us-35' => 'US$35', 'us-50' => 'US$50',
+]);
+echo "✔ Atributos globales: Edición, Color, Modelo y Monto\n";
 
 // [sku, nombre, categorías, plataforma, taxonomía, descripción, [[término, precio, oferta, stock], ...]]
 $variables = [
@@ -281,6 +337,34 @@ $variables = [
     ['NL-ACC-V02', 'Joy-Con (L)/(R) para Nintendo Switch', ['accesorios', 'controles'], 'Switch', $pa_color,
         'Par de controles Joy-Con con detección de movimiento y vibración HD.',
         [['rojo', 649, null, 5], ['azul', 649, null, 5], ['morado', 649, 599, 2]]],
+
+    // --- Consolas ---
+    ['NL-CON-V01', 'Consola PlayStation 5 Slim', ['consolas', 'cons-playstation'], 'PS5', $pa_modelo,
+        'PS5 más delgada con 1 TB de almacenamiento y control DualSense. Elige el modelo con lector de discos o la edición digital.',
+        [['con-lector-de-discos', 4799, 4599, 6], ['edicion-digital', 3999, null, 8]]],
+    ['NL-CON-V02', 'Consola Xbox Series X', ['consolas', 'cons-xbox'], 'Xbox', $pa_modelo,
+        'La Xbox más poderosa, con 4K a 120 FPS y lector de discos.',
+        [['1-tb-negra', 4899, null, 5], ['2-tb-galaxy-black', 5999, null, 2]]],
+    ['NL-CON-V03', 'Consola Xbox Series S', ['consolas', 'cons-xbox'], 'Xbox', $pa_modelo,
+        'Nueva generación totalmente digital en el tamaño más compacto.',
+        [['512-gb-blanca', 2799, 2599, 7], ['1-tb-negra', 3299, null, 4]]],
+    ['NL-CON-V04', 'Consola Nintendo Switch 2', ['consolas', 'cons-nintendo'], 'Switch 2', $pa_modelo,
+        'Pantalla de 7.9" 1080p, Joy-Con 2 magnéticos y compatibilidad con juegos de Switch.',
+        [['estandar-switch-2', 3799, null, 6], ['bundle-mario-kart-world', 4199, null, 4]]],
+    ['NL-CON-V05', 'Consola Nintendo Switch OLED', ['consolas', 'cons-nintendo'], 'Switch', $pa_modelo,
+        'Pantalla OLED de 7", base con puerto LAN y 64 GB de almacenamiento.',
+        [['oled-blanca', 2799, null, 5], ['oled-neon', 2799, 2649, 3]]],
+
+    // --- Tarjetas de regalo (cuentas de EE. UU.; precio en quetzales) ---
+    ['NL-TAR-V01', 'Tarjeta de regalo PlayStation Store', ['tarjetas'], 'PS5', $pa_monto,
+        'Tarjeta física para recargar tu cartera de PlayStation Store (cuentas de EE. UU.). El código viene impreso al reverso.',
+        [['us-10', 85, null, 50], ['us-25', 205, null, 50], ['us-50', 405, null, 30]]],
+    ['NL-TAR-V02', 'Tarjeta de regalo Xbox', ['tarjetas'], 'Xbox', $pa_monto,
+        'Saldo para juegos, Game Pass y contenido en la tienda de Xbox (cuentas de EE. UU.).',
+        [['us-10', 85, null, 40], ['us-25', 205, null, 40], ['us-50', 405, null, 25]]],
+    ['NL-TAR-V03', 'Tarjeta de regalo Nintendo eShop', ['tarjetas'], 'Switch', $pa_monto,
+        'Saldo para comprar juegos digitales en Nintendo eShop (cuentas de EE. UU.).',
+        [['us-10', 85, null, 40], ['us-20', 165, null, 40], ['us-35', 285, null, 20], ['us-50', 405, null, 20]]],
 ];
 
 $creados = 0;
@@ -336,6 +420,18 @@ foreach ($variables as [$sku, $nombre, $categorias, $plataforma, $taxonomia, $co
     $creados++;
 }
 echo "✔ Productos con variaciones creados: {$creados}\n";
+
+/* ------------------------------------------------------------------ */
+/* 5c. Pago con tarjeta (Recurrente): activado, falta solo la clave    */
+/* ------------------------------------------------------------------ */
+// La clave sk_test_/sk_live_ NO se escribe aquí: la pega el administrador en
+// WooCommerce → Ajustes → Pagos, o se define en wp-config.php. Sin clave, la
+// pasarela no aparece en el checkout (is_available() devuelve false).
+$recurrente = get_option('woocommerce_recurrente_settings', []);
+$recurrente['enabled'] = 'yes';
+$recurrente['title'] ??= 'Tarjeta de crédito o débito';
+update_option('woocommerce_recurrente_settings', $recurrente);
+echo "✔ Pasarela Recurrente activada (" . (empty($recurrente['secret_key']) ? 'falta pegar la clave' : 'clave configurada') . ")\n";
 
 /* ------------------------------------------------------------------ */
 /* 6. Página "Inicio" (portada del frontend, editable desde el panel)  */
