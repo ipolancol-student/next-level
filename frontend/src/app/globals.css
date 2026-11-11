@@ -1,36 +1,152 @@
 @import "tailwindcss";
 
+/*
+ * Sistema de diseño de Next Level.
+ * Los componentes usan nombres con significado (fondo, superficie, borde, tenue…)
+ * en vez de colores sueltos: cambiar la paleta es cambiar solo este archivo.
+ */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  /* Violeta "neón" de Next Level */
-  --color-marca: oklch(0.55 0.24 292);
-  --color-marca-oscuro: oklch(0.45 0.22 292);
-  --color-marca-claro: oklch(0.95 0.04 292);
-  --color-neon: oklch(0.86 0.18 165);
+  --font-display: var(--font-chakra), var(--font-inter), ui-sans-serif, sans-serif;
+
+  /* Capas (de atrás hacia adelante) */
+  --color-fondo: oklch(0.145 0.018 285);
+  --color-superficie: oklch(0.19 0.022 285);
+  --color-superficie-2: oklch(0.235 0.028 285);
+  --color-borde: oklch(1 0 0 / 0.09);
+  --color-borde-fuerte: oklch(1 0 0 / 0.18);
+
+  /* Texto */
+  --color-texto: oklch(0.97 0.006 285);
+  --color-tenue: oklch(0.74 0.022 285);
+  --color-apagado: oklch(0.58 0.022 285);
+
+  /* Marca */
+  --color-marca: oklch(0.62 0.24 292);
+  --color-marca-oscuro: oklch(0.52 0.22 292);
+  --color-marca-claro: oklch(0.62 0.24 292 / 0.15);
+  --color-neon: oklch(0.87 0.19 162);
+  --color-alerta: oklch(0.72 0.19 25);
+
+  /* Plataformas */
+  --color-ps: oklch(0.55 0.2 258);
+  --color-xbox: oklch(0.62 0.19 145);
+  --color-nintendo: oklch(0.6 0.23 25);
+
+  --animate-aparecer: aparecer 0.5s ease-out both;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-fondo text-texto;
+  }
+  ::selection {
+    @apply bg-marca text-white;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-neon;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+/* Superficie elevada estándar (tarjetas, paneles, formularios). */
+@utility panel {
+  @apply rounded-2xl border border-borde bg-superficie;
+}
+
+/* Botones */
+@utility boton {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-display text-sm font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility boton-primario {
+  @apply boton bg-marca text-white shadow-lg shadow-marca/30 hover:bg-marca-oscuro hover:shadow-marca/50;
+}
+@utility boton-secundario {
+  @apply boton border border-borde-fuerte text-texto hover:border-texto hover:bg-white/5;
+}
+@utility boton-neon {
+  @apply boton bg-neon text-fondo hover:brightness-110;
+}
+
+/* Campo de formulario */
+@utility campo {
+  @apply mt-1 w-full rounded-xl border border-borde bg-fondo px-3 py-2.5 text-texto placeholder:text-apagado focus:border-marca focus:outline-none aria-invalid:border-alerta;
+}
+
+/* Etiqueta pequeña (plataforma, oferta, agotado) */
+@utility chip {
+  @apply inline-flex items-center rounded-md px-2 py-0.5 font-display text-[0.7rem] font-semibold uppercase tracking-wider;
+}
+
+/* Título de sección con línea de acento */
+@utility titulo-seccion {
+  @apply flex items-center gap-3 font-display text-2xl font-bold uppercase tracking-wide;
+  &::before {
+    content: '';
+    @apply block h-6 w-1.5 rounded-full bg-neon;
+  }
+}
+
+/* Cuadrícula de fondo sutil para secciones destacadas */
+@utility rejilla {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 /* Texto HTML que viene de WordPress (descripciones, páginas). */
 .contenido-wp {
-  @apply text-neutral-700 leading-relaxed;
+  @apply leading-relaxed text-tenue;
 }
 .contenido-wp > * + * {
   @apply mt-4;
 }
 .contenido-wp h2 {
-  @apply text-xl font-semibold text-neutral-900 mt-8;
+  @apply mt-8 text-xl font-semibold text-texto;
 }
 .contenido-wp h3 {
-  @apply text-lg font-semibold text-neutral-900 mt-6;
+  @apply mt-6 text-lg font-semibold text-texto;
 }
 .contenido-wp ul {
-  @apply list-disc pl-6;
+  @apply list-disc pl-6 marker:text-neon;
 }
 .contenido-wp ol {
   @apply list-decimal pl-6;
 }
 .contenido-wp a {
-  @apply text-marca underline underline-offset-2;
+  @apply text-neon underline underline-offset-2;
+}
+.contenido-wp strong {
+  @apply text-texto;
 }
 .contenido-wp img {
   @apply rounded-lg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -20,16 +20,14 @@ export async function Precio({ monto, moneda, antes, desde, tamano = 'normal', c
 
   return (
     <span className={`inline-flex flex-col ${className}`}>
-      <span className={grande ? 'text-3xl' : ''}>
-        {desde && <span className="mr-1 text-sm font-normal text-neutral-500">Desde</span>}
+      <span className={`flex flex-wrap items-baseline gap-x-2 font-display ${grande ? 'text-4xl' : 'text-xl'}`}>
+        {desde && <span className="font-sans text-xs font-normal uppercase tracking-wider text-apagado">Desde</span>}
+        <span className="font-bold text-texto">{formatearPrecio(monto, moneda)}</span>
         {antes && (
-          <span className={`mr-2 text-neutral-400 line-through ${grande ? 'text-lg' : 'text-sm'}`}>
-            {formatearPrecio(antes, moneda)}
-          </span>
+          <span className={`text-apagado line-through ${grande ? 'text-lg' : 'text-sm'}`}>{formatearPrecio(antes, moneda)}</span>
         )}
-        <span className="font-semibold">{formatearPrecio(monto, moneda)}</span>
       </span>
-      <span className={`text-neutral-500 ${grande ? 'text-base' : 'text-xs'}`}>
+      <span className={`text-apagado ${grande ? 'text-base' : 'text-xs'}`}>
         ≈ {aDolares(monto, moneda.currency_minor_unit, quetzalesPorDolar)}
       </span>
     </span>

@@ -87,3 +87,15 @@ describe('textoStock', () => {
     expect(textoStock('12 disponibles', null)).toBe('12 disponibles');
   });
 });
+
+describe('tipoDeProducto', () => {
+  it('distingue juegos, consolas, accesorios y tarjetas por su sección', async () => {
+    const { tipoDeProducto, categoriaPrincipal } = await import('./producto');
+    expect(tipoDeProducto({ categories: [cat('consolas'), cat('consolas-xbox', 'Consolas Xbox')] })).toBe('consola');
+    expect(tipoDeProducto({ categories: [cat('tarjetas-de-regalo')] })).toBe('tarjeta');
+    expect(tipoDeProducto({ categories: [cat('videojuegos'), cat('playstation-5')] })).toBe('juego');
+    expect(tipoDeProducto({ categories: [cat('sin-seccion')] })).toBe('accesorio');
+    // La categoría principal de una consola es la subcategoría, no "Consolas".
+    expect(categoriaPrincipal({ categories: [cat('consolas'), cat('consolas-xbox', 'Consolas Xbox')] })?.name).toBe('Consolas Xbox');
+  });
+});

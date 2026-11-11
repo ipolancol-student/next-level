@@ -115,7 +115,8 @@ async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = 
 
   return {
     datos: datos as T,
-    totalPaginas: Number(res.headers.get('X-WP-TotalPages') ?? 1)
+    totalPaginas: Number(res.headers.get('X-WP-TotalPages') ?? 1),
+    total: Number(res.headers.get('X-WP-Total') ?? 0)
   };
 }
 
@@ -150,18 +151,28 @@ export async function getProductos({
   porPagina = 12,
   categoria,
   buscar,
-  orden
-}: { pagina?: number; porPagina?: number; categoria?: string; buscar?: string; orden?: 'date' | 'price' | 'popularity' } = {}) {
+  orden,
+  ofertas
+}: {
+  pagina?: number;
+  porPagina?: number;
+  categoria?: string;
+  buscar?: string;
+  orden?: 'date' | 'price' | 'popularity';
+  /** Solo productos con precio rebajado. */
+  ofertas?: boolean;
+} = {}) {
   const params = new URLSearchParams({ page: String(pagina), per_page: String(porPagina) });
   if (categoria) params.set('category', categoria);
   if (buscar) params.set('search', buscar);
+  if (ofertas) params.set('on_sale', 'true');
   if (orden) {
     params.set('orderby', orden);
     params.set('order', orden === 'price' ? 'asc' : 'desc');
   }
 
-  const { datos, totalPaginas } = await catalogoFetch<Producto[]>(`/products?${params}`);
-  return { productos: datos, totalPaginas };
+  const { datos, totalPaginas, total } = await catalogoFetch<Producto[]>(`/products?${params}`);
+  return { productos: datos, totalPaginas, total };
 }
 
 export async function getProducto(slug: string) {

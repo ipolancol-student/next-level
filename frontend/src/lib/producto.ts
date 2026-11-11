@@ -29,15 +29,31 @@ export function plataformaDe(producto: Pick<Producto, 'tags'>): { id: Plataforma
     : { id: 'multiplataforma', nombre: 'Multiplataforma' };
 }
 
-const CATEGORIAS_PADRE = ['videojuegos', 'accesorios'];
+/** Categorías de primer nivel del catálogo (las "secciones" de la tienda). */
+export const SECCIONES = [
+  { slug: 'videojuegos', nombre: 'Videojuegos', tipo: 'juego' },
+  { slug: 'consolas', nombre: 'Consolas', tipo: 'consola' },
+  { slug: 'accesorios', nombre: 'Accesorios', tipo: 'accesorio' },
+  { slug: 'tarjetas-de-regalo', nombre: 'Tarjetas de regalo', tipo: 'tarjeta' }
+] as const;
+
+export type TipoProducto = (typeof SECCIONES)[number]['tipo'];
+
+const CATEGORIAS_PADRE: string[] = SECCIONES.map((s) => s.slug);
 
 /** La categoría más específica (p. ej. "Controles" en vez de "Accesorios"). */
 export function categoriaPrincipal(producto: Pick<Producto, 'categories'>) {
   return producto.categories.find((c) => !CATEGORIAS_PADRE.includes(c.slug)) ?? producto.categories[0];
 }
 
+/** Tipo de producto según su sección: decide el ícono, el texto de las variaciones, etc. */
+export function tipoDeProducto(producto: Pick<Producto, 'categories'>): TipoProducto {
+  const seccion = SECCIONES.find((s) => producto.categories.some((c) => c.slug === s.slug));
+  return seccion?.tipo ?? 'accesorio';
+}
+
 export function esVideojuego(producto: Pick<Producto, 'categories'>) {
-  return producto.categories.some((c) => c.slug === 'videojuegos');
+  return tipoDeProducto(producto) === 'juego';
 }
 
 /* ---------- Variaciones ---------- */

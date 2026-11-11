@@ -34,16 +34,16 @@ export function FormularioCompra(props: Props) {
   const sinStock = props.tipo === 'variable' && !opcion;
 
   return (
-    <form action={accion} className="mt-6 space-y-5">
+    <form action={accion} className="mt-5 space-y-5 first:mt-0">
       {props.tipo === 'variable' && (
         <fieldset>
-          <legend className="text-sm font-semibold">{props.atributo}</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <legend className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-apagado">Elige {props.atributo.toLowerCase()}</legend>
+          <div className="mt-3 grid grid-cols-2 gap-2">
             {opciones.map((o) => (
               <label
                 key={o.variacionId}
-                className={`cursor-pointer rounded-xl border-2 px-4 py-2 text-sm transition has-checked:border-marca has-checked:bg-marca-claro has-disabled:cursor-not-allowed has-disabled:opacity-40 ${
-                  o.enStock ? 'border-neutral-200 hover:border-neutral-400' : 'border-dashed border-neutral-300 line-through'
+                className={`flex cursor-pointer flex-col rounded-xl border-2 bg-fondo px-4 py-3 text-sm transition has-checked:border-marca has-checked:bg-marca-claro has-checked:shadow-lg has-checked:shadow-marca/20 has-disabled:cursor-not-allowed has-disabled:opacity-40 ${
+                  o.enStock ? 'border-borde hover:border-borde-fuerte' : 'border-dashed border-borde'
                 }`}
               >
                 <input
@@ -55,20 +55,25 @@ export function FormularioCompra(props: Props) {
                   disabled={!o.enStock}
                   className="sr-only"
                 />
-                <span className="font-medium">{o.nombre}</span>
-                <span className="ml-2 text-neutral-500">{o.precio}</span>
+                <span className="font-display font-bold uppercase tracking-wide">{o.nombre}</span>
+                <span className="text-tenue">{o.enStock ? o.precio : 'Agotado'}</span>
               </label>
             ))}
           </div>
 
           {opcion && (
-            <div className="mt-4" aria-live="polite">
-              <p className="text-3xl">
-                {opcion.precioAntes && <span className="mr-2 text-lg text-neutral-400 line-through">{opcion.precioAntes}</span>}
-                <span className="font-semibold">{opcion.precio}</span>
+            <div className="mt-5" aria-live="polite">
+              <p className="flex flex-wrap items-baseline gap-x-2 font-display text-4xl">
+                <span className="font-bold">{opcion.precio}</span>
+                {opcion.precioAntes && <span className="text-lg text-apagado line-through">{opcion.precioAntes}</span>}
               </p>
-              <p className="text-neutral-500">≈ {opcion.precioUsd}</p>
-              {opcion.stockTexto && <p className="mt-1 text-sm text-neutral-500">{opcion.stockTexto}</p>}
+              <p className="text-apagado">≈ {opcion.precioUsd}</p>
+              {opcion.stockTexto && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-tenue">
+                  <span className="size-2 rounded-full bg-neon" aria-hidden="true" />
+                  {opcion.stockTexto}
+                </p>
+              )}
             </div>
           )}
         </fieldset>
@@ -78,9 +83,9 @@ export function FormularioCompra(props: Props) {
       <input type="hidden" name="id" value={id ?? ''} />
 
       {sinStock ? (
-        <p className="rounded-lg bg-neutral-100 px-4 py-3 font-medium text-neutral-700">Todas las opciones están agotadas.</p>
+        <p className="rounded-xl border border-borde bg-fondo px-4 py-3 font-display font-semibold uppercase tracking-wider text-tenue">Todas las opciones están agotadas</p>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex items-stretch gap-3">
           <label className="sr-only" htmlFor="cantidad">Cantidad</label>
           <input
             id="cantidad"
@@ -89,11 +94,11 @@ export function FormularioCompra(props: Props) {
             min={1}
             max={props.tipo === 'simple' && props.maximo > 0 ? Math.min(props.maximo, 99) : 99}
             defaultValue={1}
-            className="w-20 rounded-lg border border-neutral-300 px-3 py-2"
+            className="w-20 rounded-xl border border-borde bg-fondo px-3 text-center font-display text-lg font-bold focus:border-marca focus:outline-none"
           />
           <button
             disabled={enviando || !id}
-            className="rounded-full bg-marca px-6 py-2.5 font-semibold text-white hover:bg-marca-oscuro disabled:opacity-60"
+            className="boton-primario flex-1"
           >
             {enviando ? 'Añadiendo…' : 'Añadir al carrito'}
           </button>
@@ -101,7 +106,7 @@ export function FormularioCompra(props: Props) {
       )}
 
       {estado.error && (
-        <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">{estado.error}</p>
+        <p className="rounded-xl border border-alerta/40 bg-alerta/10 px-4 py-2.5 text-sm text-alerta" role="alert">{estado.error}</p>
       )}
     </form>
   );

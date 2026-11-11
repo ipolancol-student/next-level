@@ -32,8 +32,8 @@ async function Contenido({ params }: { params: Promise<{ slug: string }> }) {
 
   return (
     <article className="mx-auto max-w-3xl">
-      <h1 className="text-3xl font-bold tracking-tight" dangerouslySetInnerHTML={{ __html: pagina.titulo }} />
-      <div className="contenido-wp mt-6" dangerouslySetInnerHTML={{ __html: pagina.contenido }} />
+      <h1 className="text-4xl font-bold uppercase">{limpiarHtml(pagina.titulo)}</h1>
+      <div className="contenido-wp mt-8 text-lg" dangerouslySetInnerHTML={{ __html: pagina.contenido }} />
     </article>
   );
 }

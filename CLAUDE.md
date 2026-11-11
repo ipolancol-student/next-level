@@ -42,10 +42,19 @@ Para el detalle completo, lee [README.md](README.md).
   `C:\Users\isaio\Studio\next-level\wp-content\mu-plugins\`. Nunca edites solo la copia.
 - No edites el núcleo de WordPress (`wp-admin`, `wp-includes`, `wp-*.php`).
 
+## Diseño
+
+- Tema oscuro con tokens semánticos en `frontend/src/app/globals.css` (`fondo`, `superficie`, `borde`,
+  `texto`, `tenue`, `apagado`, `marca`, `neon`, `alerta`) y utilidades `panel`, `boton-primario`,
+  `boton-secundario`, `boton-neon`, `campo`, `chip`, `titulo-seccion`, `rejilla`. No uses colores sueltos
+  como `neutral-500` o `bg-white`.
+- Nombres de productos y categorías se muestran como texto (`limpiarHtml`), nunca con
+  `dangerouslySetInnerHTML`. Lo que venga de la URL (búsqueda) jamás va como HTML.
+
 ## Comprobaciones
 
 ```bash
-cd frontend && npm run verificar   # lint + tipos + 43 pruebas (igual que la CI)
+cd frontend && npm run verificar   # lint + tipos + pruebas (igual que la CI)
 ```
 
 Pruebas PHP: copia `wordpress/pruebas/prueba-recurrente.php` al sitio y `studio wp eval-file prueba-recurrente.php`.

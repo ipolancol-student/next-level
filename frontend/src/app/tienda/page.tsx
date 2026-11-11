@@ -2,13 +2,14 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Form from 'next/form';
 import { getProductos, getCategorias, type Producto, type Categoria } from '@/lib/woo';
+import { limpiarHtml } from '@/lib/producto';
 import { TarjetaProducto } from '@/components/TarjetaProducto';
 import { AvisoConexion } from '@/components/AvisoConexion';
 import { CuadriculaCargando } from '@/components/Cargando';
 
 export const metadata = { title: 'Tienda' };
 
-type Filtros = Promise<{ categoria?: string; buscar?: string; pagina?: string; orden?: string }>;
+type Filtros = Promise<{ categoria?: string; buscar?: string; pagina?: string; orden?: string; ofertas?: string }>;
 
 const ORDENES = [
   { id: 'date', nombre: 'Novedades' },
@@ -17,10 +18,12 @@ const ORDENES = [
 ] as const;
 type Orden = (typeof ORDENES)[number]['id'];
 
-// Filtros que llegan en la URL: /tienda?categoria=playstation-5&buscar=mario&pagina=2
+const POR_PAGINA = 12;
+
+// Filtros que llegan en la URL: /tienda?categoria=playstation-5&buscar=mario&orden=price&ofertas=1&pagina=2
 export default function Tienda({ searchParams }: { searchParams: Filtros }) {
   return (
-    <Suspense fallback={<CuadriculaCargando cantidad={6} />}>
+    <Suspense fallback={<CuadriculaCargando cantidad={8} />}>
       <Catalogo searchParams={searchParams} />
     </Suspense>
   );
@@ -29,120 +32,154 @@ export default function Tienda({ searchParams }: { searchParams: Filtros }) {
 async function Catalogo({ searchParams }: { searchParams: Filtros }) {
   const params = await searchParams;
   const categoria = params.categoria ?? ''; // slug de la categoría
-  const buscar = params.buscar?.trim() ?? '';
+  const buscar = params.buscar?.trim().slice(0, 80) ?? '';
   const pagina = Math.max(1, Number(params.pagina) || 1);
+  const ofertas = params.ofertas === '1';
   // Solo se aceptan órdenes conocidos (lo demás viene de la URL y no es confiable).
   const orden: Orden = ORDENES.find((o) => o.id === params.orden)?.id ?? 'date';
 
   let productos: Producto[] = [];
   let categorias: Categoria[] = [];
   let totalPaginas = 1;
+  let total = 0;
   let error: unknown = null;
   try {
-    const [resultado, cats] = await Promise.all([getProductos({ pagina, categoria, buscar, orden }), getCategorias()]);
-    ({ productos, totalPaginas } = resultado);
+    const [resultado, cats] = await Promise.all([
+      getProductos({ pagina, porPagina: POR_PAGINA, categoria, buscar, orden, ofertas }),
+      getCategorias()
+    ]);
+    ({ productos, totalPaginas, total } = resultado);
     categorias = cats;
   } catch (e) {
     error = e;
   }
 
   const categoriaActual = categorias.find((c) => c.slug === categoria);
-  // Menú en dos niveles: Videojuegos → consolas, Accesorios → tipos.
+  // Menú en dos niveles: Videojuegos → consolas, Accesorios → tipos, etc.
   const padres = categorias.filter((c) => !c.parent);
   const hijosDe = (id: number) => categorias.filter((c) => c.parent === id);
 
-  function url(cambios: { pagina?: number; orden?: Orden }) {
+  function url(cambios: { pagina?: number; orden?: Orden; ofertas?: boolean; categoria?: string | null }) {
     const p = new URLSearchParams();
-    if (categoria) p.set('categoria', categoria);
+    const cat = cambios.categoria === undefined ? categoria : cambios.categoria;
+    if (cat) p.set('categoria', cat);
     if (buscar) p.set('buscar', buscar);
     const o = cambios.orden ?? orden;
     if (o !== 'date') p.set('orden', o);
+    if (cambios.ofertas ?? ofertas) p.set('ofertas', '1');
     if (cambios.pagina && cambios.pagina > 1) p.set('pagina', String(cambios.pagina));
-    return `/tienda?${p}`;
+    const texto = p.toString();
+    return texto ? `/tienda?${texto}` : '/tienda';
   }
 
-  const claseCategoria = (activa: boolean) =>
-    `flex justify-between rounded-md px-2 py-1 hover:bg-neutral-100 ${activa ? 'bg-marca-claro font-semibold text-marca-oscuro' : ''}`;
+  // Texto plano (nunca HTML): `buscar` viene de la URL y podría traer código malicioso (XSS).
+  const titulo = buscar
+    ? `“${buscar}”`
+    : categoriaActual
+      ? limpiarHtml(categoriaActual.name)
+      : ofertas
+        ? 'Ofertas'
+        : 'Todo el catálogo';
+
+  const enlaceCategoria = (activa: boolean) =>
+    `flex items-center justify-between rounded-lg px-3 py-1.5 transition ${
+      activa ? 'bg-marca-claro font-semibold text-texto' : 'text-tenue hover:bg-white/5 hover:text-texto'
+    }`;
 
   return (
-    <div className="flex flex-col gap-8 md:flex-row">
-      <aside className="md:w-60 md:shrink-0">
-        <Form action="/tienda" className="md:hidden">
-          <input
-            type="search"
-            name="buscar"
-            defaultValue={buscar}
-            placeholder="Buscar juegos y accesorios…"
-            className="w-full rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm"
-          />
+    <div className="grid gap-8 lg:grid-cols-[16rem_1fr]">
+      <aside className="space-y-6">
+        <Form action="/tienda" className="md:hidden" role="search">
+          <input type="search" name="buscar" defaultValue={buscar} aria-label="Buscar productos" placeholder="Buscar…" className="campo mt-0" />
         </Form>
-        <nav aria-label="Categorías" className="mt-4 space-y-4 text-sm md:mt-0">
-          <Link href="/tienda" className={claseCategoria(!categoria)}>Todo el catálogo</Link>
+
+        <nav aria-label="Categorías" className="panel space-y-4 p-4 text-sm">
+          <Link href={url({ categoria: null, pagina: 1 })} className={enlaceCategoria(!categoria)}>
+            Todo el catálogo
+          </Link>
           {padres.map((padre) => (
             <div key={padre.id}>
-              <Link href={`/tienda?categoria=${padre.slug}`} className={claseCategoria(categoria === padre.slug)}>
-                <span className="font-semibold uppercase tracking-wide" dangerouslySetInnerHTML={{ __html: padre.name }} />
-                <span className="text-neutral-400">{padre.count}</span>
+              <Link href={url({ categoria: padre.slug, pagina: 1 })} className={enlaceCategoria(categoria === padre.slug)}>
+                <span className="font-display font-bold uppercase tracking-wider">{limpiarHtml(padre.name)}</span>
+                <span className="text-xs text-apagado">{padre.count}</span>
               </Link>
-              <ul className="mt-1 space-y-0.5 border-l border-neutral-200 pl-2">
-                {hijosDe(padre.id).map((c) => (
-                  <li key={c.id}>
-                    <Link href={`/tienda?categoria=${c.slug}`} className={claseCategoria(categoria === c.slug)}>
-                      <span dangerouslySetInnerHTML={{ __html: c.name }} />
-                      <span className="text-neutral-400">{c.count}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {hijosDe(padre.id).length > 0 && (
+                <ul className="ml-3 mt-1 space-y-0.5 border-l border-borde pl-2">
+                  {hijosDe(padre.id).map((c) => (
+                    <li key={c.id}>
+                      <Link href={url({ categoria: c.slug, pagina: 1 })} className={enlaceCategoria(categoria === c.slug)}>
+                        <span>{limpiarHtml(c.name)}</span>
+                        <span className="text-xs text-apagado">{c.count}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </nav>
+
+        <Link
+          href={url({ ofertas: !ofertas, pagina: 1 })}
+          aria-pressed={ofertas}
+          className={`flex items-center justify-between rounded-2xl border p-4 font-display text-sm font-bold uppercase tracking-wider transition ${
+            ofertas ? 'border-neon bg-neon/10 text-neon' : 'border-borde bg-superficie text-tenue hover:text-texto'
+          }`}
+        >
+          Solo ofertas
+          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition ${ofertas ? 'justify-end bg-neon' : 'bg-superficie-2'}`} aria-hidden="true">
+            <span className="size-4 rounded-full bg-fondo" />
+          </span>
+        </Link>
       </aside>
 
-      <section className="flex-1">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {buscar ? (
-            `Resultados para "${buscar}"`
-          ) : categoriaActual ? (
-            <span dangerouslySetInnerHTML={{ __html: categoriaActual.name }} />
-          ) : (
-            'Todo el catálogo'
-          )}
-        </h1>
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-borde pb-5">
+          <div>
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.25em] text-neon">
+              {buscar ? 'Resultados de búsqueda' : 'Tienda'}
+            </p>
+            <h1 className="mt-1 text-4xl font-bold uppercase">{titulo}</h1>
+            {!error && <p className="mt-1 text-sm text-tenue">{total} {total === 1 ? 'producto' : 'productos'}</p>}
+          </div>
 
-        <nav aria-label="Ordenar" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-neutral-500">Ordenar:</span>
-          {ORDENES.map((o) => (
-            <Link
-              key={o.id}
-              href={url({ orden: o.id })}
-              aria-current={orden === o.id ? 'page' : undefined}
-              className={`rounded-full px-3 py-1 ${orden === o.id ? 'bg-neutral-950 text-white' : 'border border-neutral-300 hover:bg-white'}`}
-            >
-              {o.nombre}
-            </Link>
-          ))}
-        </nav>
+          <nav aria-label="Ordenar" className="flex flex-wrap gap-1 rounded-xl border border-borde bg-superficie p-1 text-sm">
+            {ORDENES.map((o) => (
+              <Link
+                key={o.id}
+                href={url({ orden: o.id, pagina: 1 })}
+                aria-current={orden === o.id ? 'page' : undefined}
+                className={`rounded-lg px-3 py-1.5 font-display font-semibold uppercase tracking-wider transition ${
+                  orden === o.id ? 'bg-marca text-white' : 'text-tenue hover:text-texto'
+                }`}
+              >
+                {o.nombre}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         {error ? (
           <div className="mt-6"><AvisoConexion error={error} /></div>
         ) : productos.length === 0 ? (
-          <p className="mt-6 text-neutral-500">No encontramos productos.</p>
+          <div className="panel mt-6 p-10 text-center">
+            <p className="font-display text-xl font-bold uppercase">Sin resultados</p>
+            <p className="mt-2 text-tenue">Prueba con otra búsqueda o quita los filtros.</p>
+            <Link href="/tienda" className="boton-secundario mt-6">Ver todo el catálogo</Link>
+          </div>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-            {productos.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+            {productos.map((p, i) => <TarjetaProducto key={p.id} producto={p} prioridad={i < 4} />)}
           </div>
         )}
 
         {totalPaginas > 1 && (
-          <nav className="mt-8 flex items-center justify-center gap-2 text-sm" aria-label="Paginación">
-            {pagina > 1 && (
-              <Link href={url({ pagina: pagina - 1 })} className="rounded-full border px-4 py-1.5 hover:bg-white">← Anterior</Link>
-            )}
-            <span className="px-2 text-neutral-500">Página {pagina} de {totalPaginas}</span>
-            {pagina < totalPaginas && (
-              <Link href={url({ pagina: pagina + 1 })} className="rounded-full border px-4 py-1.5 hover:bg-white">Siguiente →</Link>
-            )}
+          <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Paginación">
+            {pagina > 1 && <Link href={url({ pagina: pagina - 1 })} className="boton-secundario px-4 py-2">← Anterior</Link>}
+            <span className="px-3 font-display text-sm uppercase tracking-wider text-tenue">
+              Página {pagina} de {totalPaginas}
+            </span>
+            {pagina < totalPaginas && <Link href={url({ pagina: pagina + 1 })} className="boton-secundario px-4 py-2">Siguiente →</Link>}
           </nav>
         )}
       </section>

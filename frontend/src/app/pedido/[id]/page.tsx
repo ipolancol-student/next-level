@@ -64,51 +64,52 @@ async function DetallePedido({
       : pedido.metodo_pago === 'bacs' && pedido.estado === 'on-hold'
         ? { titulo: '¡Pedido recibido!', texto: 'Te enviamos por correo los datos de la cuenta para la transferencia.', tono: 'ok' as const }
         : ESTADOS[pedido.estado] ?? { titulo: 'Pedido recibido', texto: `Estado: ${pedido.estado}`, tono: 'espera' as const };
-  const color = { ok: 'bg-marca-claro text-marca', espera: 'bg-amber-100 text-amber-700', error: 'bg-red-100 text-red-700' }[estado.tono];
+  const color = { ok: 'bg-neon/15 text-neon ring-neon/40', espera: 'bg-marca-claro text-marca ring-marca/40', error: 'bg-alerta/15 text-alerta ring-alerta/40' }[estado.tono];
   const icono = { ok: '✓', espera: '…', error: '!' }[estado.tono];
   const esperandoTarjeta = !cancelado && pedido.estado === 'pending' && pedido.metodo_pago === 'recurrente';
 
   return (
-    <div className="mx-auto max-w-xl rounded-2xl border border-neutral-200 bg-white p-8">
+    <div className="panel relative mx-auto max-w-xl overflow-hidden p-8">
+      <div className="rejilla pointer-events-none absolute inset-x-0 top-0 h-40 opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden="true" />
       {/* Mientras Recurrente confirma el pago, la página se vuelve a consultar sola. */}
       {esperandoTarjeta && <RefrescoAutomatico cadaSegundos={3} maximo={10} />}
 
-      <div className="text-center">
-        <div className={`mx-auto grid size-14 place-items-center rounded-full text-2xl font-bold ${color}`} aria-hidden="true">
+      <div className="relative text-center">
+        <div className={`mx-auto grid size-16 place-items-center rounded-2xl font-display text-3xl font-bold ring-1 ${color}`} aria-hidden="true">
           {icono}
         </div>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight">{estado.titulo}</h1>
-        <p className="mt-1 text-neutral-600" aria-live="polite">{estado.texto}</p>
-        <p className="mt-3 text-sm text-neutral-500">
-          Pedido <strong className="text-neutral-900">#{pedido.id}</strong> · {pedido.fecha}
+        <h1 className="mt-5 text-3xl font-bold uppercase">{estado.titulo}</h1>
+        <p className="mt-2 text-tenue" aria-live="polite">{estado.texto}</p>
+        <p className="mt-4 font-display text-sm uppercase tracking-wider text-apagado">
+          Pedido <strong className="text-texto">#{pedido.id}</strong> · {pedido.fecha}
         </p>
       </div>
 
-      <ul className="mt-6 divide-y divide-neutral-100 border-y border-neutral-100 text-sm">
+      <ul className="relative mt-8 divide-y divide-borde border-y border-borde text-sm">
         {pedido.items.map((item, i) => (
-          <li key={i} className="flex justify-between gap-4 py-2">
+          <li key={i} className="flex justify-between gap-4 py-3">
             <span>{item.nombre} × {item.cantidad}</span>
             <span className="whitespace-nowrap">{formatearQuetzales(item.total)}</span>
           </li>
         ))}
       </ul>
-      <dl className="mt-3 space-y-1 text-sm">
-        <div className="flex justify-between"><dt>Envío</dt><dd>{formatearQuetzales(pedido.envio)}</dd></div>
-        <div className="flex justify-between text-base font-semibold"><dt>Total</dt><dd>{formatearQuetzales(pedido.total)}</dd></div>
-        <div className="flex justify-between text-neutral-500"><dt>Método de pago</dt><dd>{pedido.metodo_pago_titulo}</dd></div>
+      <dl className="mt-4 space-y-2 text-sm">
+        <div className="flex justify-between"><dt className="text-tenue">Envío</dt><dd>{Number(pedido.envio) === 0 ? <span className="text-neon">Gratis</span> : formatearQuetzales(pedido.envio)}</dd></div>
+        <div className="flex justify-between border-t border-borde pt-3 font-display text-xl font-bold uppercase"><dt>Total</dt><dd>{formatearQuetzales(pedido.total)}</dd></div>
+        <div className="flex justify-between text-apagado"><dt>Método de pago</dt><dd>{pedido.metodo_pago_titulo}</dd></div>
       </dl>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {pedido.url_pago && (cancelado || pedido.estado === 'failed') && (
-          <a href={pedido.url_pago} className="rounded-full bg-neutral-950 px-6 py-2.5 font-semibold text-white hover:bg-neutral-800">
+          <a href={pedido.url_pago} className="boton-neon">
             Intentar pagar de nuevo
           </a>
         )}
-        <Link href="/tienda" className="rounded-full bg-marca px-6 py-2.5 font-semibold text-white hover:bg-marca-oscuro">
+        <Link href="/tienda" className="boton-primario">
           Seguir comprando
         </Link>
       </div>
-      <p className="mt-6 text-center text-xs text-neutral-500">
+      <p className="mt-6 text-center text-xs text-apagado">
         Guarda este enlace para consultar el estado de tu pedido cuando quieras.
       </p>
     </div>

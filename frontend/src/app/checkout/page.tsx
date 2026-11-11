@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getCarritoSiExiste } from '@/lib/woo';
-import { NOMBRES_PAGO } from '@/lib/producto';
+import { NOMBRES_PAGO, limpiarHtml } from '@/lib/producto';
 import { formatearPrecio, aDolares } from '@/lib/dinero';
 import { TIENDA } from '@/lib/config';
 import { getTipoCambio } from '@/lib/tipoCambio';
@@ -13,8 +13,9 @@ export const metadata = { title: 'Finalizar compra' };
 export default function PaginaCheckout() {
   return (
     <>
-      <h1 className="text-2xl font-bold tracking-tight">Finalizar compra</h1>
-      <Suspense fallback={<div className="mt-6"><BloqueCargando alto="h-96" /></div>}>
+      <p className="font-display text-xs font-semibold uppercase tracking-[0.25em] text-neon">Paso 2 de 2</p>
+      <h1 className="mt-1 text-4xl font-bold uppercase">Finalizar compra</h1>
+      <Suspense fallback={<div className="mt-8"><BloqueCargando alto="h-96" /></div>}>
         <Checkout />
       </Suspense>
     </>
@@ -35,7 +36,7 @@ async function Checkout() {
         .map((m) => ({ id: m, nombre: NOMBRES_PAGO[m] ?? m }))}
       lineas={carrito.items.map((item) => ({
         key: item.key,
-        nombre: item.name + (item.variation.length ? ` (${item.variation.map((v) => v.value).join(", ")})` : ""),
+        nombre: limpiarHtml(item.name) + (item.variation.length ? ` (${item.variation.map((v) => v.value).join(", ")})` : ""),
         cantidad: item.quantity,
         total: formatearPrecio(item.totals.line_total, item.totals)
       }))}

@@ -2,19 +2,20 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProducto, getVariaciones, type Producto } from '@/lib/woo';
-import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion, textoStock } from '@/lib/producto';
+import { getProducto, getProductos, getVariaciones, type Producto } from '@/lib/woo';
+import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion, textoStock, tipoDeProducto } from '@/lib/producto';
 import { formatearPrecio, aDolares } from '@/lib/dinero';
 import { getTipoCambio } from '@/lib/tipoCambio';
 import { env } from '@/lib/env';
 import { TIENDA } from '@/lib/config';
 import { AvisoConexion } from '@/components/AvisoConexion';
 import { FormularioCompra, type OpcionCompra } from '@/components/FormularioCompra';
-import { BloqueCargando } from '@/components/Cargando';
+import { BloqueCargando, CuadriculaCargando } from '@/components/Cargando';
 import { GaleriaProducto } from '@/components/GaleriaProducto';
 import { Portada } from '@/components/Portada';
 import { Precio } from '@/components/Precio';
 import { JsonLd } from '@/components/JsonLd';
+import { TarjetaProducto } from '@/components/TarjetaProducto';
 
 // Ruta dinámica: /producto/astro-bot-ps5 → busca el producto por su slug.
 export async function generateMetadata({ params }: PageProps<'/producto/[slug]'>): Promise<Metadata> {
@@ -41,11 +42,18 @@ export async function generateMetadata({ params }: PageProps<'/producto/[slug]'>
 
 export default function PaginaProducto({ params }: PageProps<'/producto/[slug]'>) {
   return (
-    <Suspense fallback={<BloqueCargando alto="h-96" />}>
+    <Suspense fallback={<BloqueCargando alto="h-[36rem]" />}>
       <DetalleProducto params={params} />
     </Suspense>
   );
 }
+
+const GARANTIAS = [
+  'Producto nuevo y sellado de fábrica',
+  'Envío a todo Guatemala · gratis desde Q500',
+  'Pago con tarjeta, contra entrega o transferencia',
+  'Garantía de 30 días contra defectos'
+];
 
 async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -61,12 +69,12 @@ async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }
   if (!producto) notFound();
 
   const { quetzalesPorDolar } = await getTipoCambio();
-  const padre = producto.categories.find((c) => c.slug === 'videojuegos' || c.slug === 'accesorios');
+  const seccion = producto.categories.find((c) => !c.parent || ['videojuegos', 'consolas', 'accesorios', 'tarjetas-de-regalo'].includes(c.slug));
   const categoria = categoriaPrincipal(producto);
   const plataforma = plataformaDe(producto);
   const nombre = limpiarHtml(producto.name);
 
-  // Opciones de compra de un producto variable (edición o color), con su precio y stock.
+  // Opciones de compra de un producto variable (edición, color, modelo o monto), con su precio y stock.
   const variable = producto.type === 'variable' ? opcionesDeVariacion(producto) : null;
   const opciones: OpcionCompra[] = (variable?.opciones ?? []).flatMap((o) => {
     const v = variaciones.find((x) => x.id === o.variacionId);
@@ -89,84 +97,134 @@ async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }
     <>
       <JsonLd datos={datosEstructurados(producto, variaciones)} />
 
-      <nav className="text-sm text-neutral-500" aria-label="Ruta">
-        <Link href="/tienda" className="hover:text-marca">Tienda</Link>
-        {padre && (
+      <nav className="flex flex-wrap gap-2 font-display text-xs font-semibold uppercase tracking-wider text-apagado" aria-label="Ruta">
+        <Link href="/tienda" className="hover:text-texto">Tienda</Link>
+        {seccion && (
           <>
-            {' / '}
-            <Link href={`/tienda?categoria=${padre.slug}`} className="hover:text-marca" dangerouslySetInnerHTML={{ __html: padre.name }} />
+            <span aria-hidden="true">/</span>
+            <Link href={`/tienda?categoria=${seccion.slug}`} className="hover:text-texto">{limpiarHtml(seccion.name)}</Link>
           </>
         )}
-        {categoria && categoria !== padre && (
+        {categoria && categoria !== seccion && (
           <>
-            {' / '}
-            <Link href={`/tienda?categoria=${categoria.slug}`} className="hover:text-marca" dangerouslySetInnerHTML={{ __html: categoria.name }} />
+            <span aria-hidden="true">/</span>
+            <Link href={`/tienda?categoria=${categoria.slug}`} className="hover:text-texto">{limpiarHtml(categoria.name)}</Link>
           </>
         )}
       </nav>
 
-      <div className="mt-4 grid gap-10 md:grid-cols-2">
-        <GaleriaProducto imagenes={producto.images.map(({ id, src, alt }) => ({ id, src, alt }))} nombre={nombre}>
-          <Portada producto={producto} grande />
+      <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <GaleriaProducto
+          imagenes={producto.images.map(({ id, src, alt }) => ({ id, src, alt }))}
+          nombre={nombre}
+          formato={tipoDeProducto(producto) === 'juego' ? 'vertical' : 'horizontal'}
+        >
+          <Portada producto={producto} grande prioridad />
         </GaleriaProducto>
 
-        <div>
-          <span className="inline-block rounded-full bg-neutral-950 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-neon">
-            {plataforma.nombre}
-          </span>
-          <h1 className="mt-3 text-3xl font-extrabold tracking-tight" dangerouslySetInnerHTML={{ __html: producto.name }} />
-
-          {/* En productos variables, el precio lo muestra el selector según la opción elegida. */}
-          {!variable && (
-            <Precio
-              monto={producto.prices.price}
-              moneda={producto.prices}
-              antes={producto.on_sale ? producto.prices.regular_price : undefined}
-              tamano="grande"
-              className="mt-4"
-            />
-          )}
+        <div className="lg:sticky lg:top-32 lg:self-start">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="chip bg-marca-claro text-neon">{plataforma.nombre}</span>
+            {categoria && <span className="chip border border-borde text-tenue">{limpiarHtml(categoria.name)}</span>}
+            {producto.on_sale && producto.is_in_stock && <span className="chip bg-neon text-fondo">Oferta</span>}
+          </div>
+          <h1 className="mt-4 text-4xl font-bold uppercase leading-tight">{nombre}</h1>
 
           {producto.short_description && (
             <div className="contenido-wp mt-4" dangerouslySetInnerHTML={{ __html: producto.short_description }} />
           )}
 
-          {!producto.is_in_stock ? (
-            <p className="mt-6 rounded-lg bg-neutral-100 px-4 py-3 font-medium text-neutral-700">
-              Agotado por ahora. ¡Vuelve pronto!
-            </p>
-          ) : variable && opciones.length > 0 ? (
-            <FormularioCompra tipo="variable" atributo={variable.atributo} opciones={opciones} porDefecto={porDefecto} />
-          ) : producto.type === 'simple' ? (
-            <>
-              <FormularioCompra tipo="simple" id={producto.id} maximo={producto.add_to_cart.maximum} />
-              {producto.stock_availability?.text && (
-                <p className="mt-3 text-sm text-neutral-500">
-                  {textoStock(producto.stock_availability.text, producto.low_stock_remaining)}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="mt-6 rounded-lg bg-neutral-100 px-4 py-3 text-sm text-neutral-600">
-              Este tipo de producto no se puede comprar directamente en la tienda.
-            </p>
-          )}
+          <div className="panel mt-6 p-6">
+            {/* En productos variables, el precio lo muestra el selector según la opción elegida. */}
+            {!variable && (
+              <Precio
+                monto={producto.prices.price}
+                moneda={producto.prices}
+                antes={producto.on_sale ? producto.prices.regular_price : undefined}
+                tamano="grande"
+              />
+            )}
 
-          <ul className="mt-8 grid gap-2 text-sm text-neutral-600">
-            <li>✓ Producto nuevo y sellado</li>
-            <li>✓ Envío a todo Guatemala · gratis desde Q500</li>
-            <li>✓ Pago seguro con tarjeta, contra entrega o transferencia</li>
+            {!producto.is_in_stock ? (
+              <p className="mt-2 rounded-xl border border-borde bg-fondo px-4 py-3 font-display font-semibold uppercase tracking-wider text-tenue">
+                Agotado por ahora
+              </p>
+            ) : variable && opciones.length > 0 ? (
+              <FormularioCompra tipo="variable" atributo={variable.atributo} opciones={opciones} porDefecto={porDefecto} />
+            ) : producto.type === 'simple' ? (
+              <>
+                <FormularioCompra tipo="simple" id={producto.id} maximo={producto.add_to_cart.maximum} />
+                {producto.stock_availability?.text && (
+                  <p className="mt-3 flex items-center gap-2 text-sm text-tenue">
+                    <span className="size-2 rounded-full bg-neon" aria-hidden="true" />
+                    {textoStock(producto.stock_availability.text, producto.low_stock_remaining)}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-tenue">Este tipo de producto no se puede comprar directamente en la tienda.</p>
+            )}
+          </div>
+
+          <ul className="mt-6 grid gap-2.5 text-sm text-tenue sm:grid-cols-2">
+            {GARANTIAS.map((g) => (
+              <li key={g} className="flex gap-2">
+                <svg viewBox="0 0 24 24" className="mt-0.5 size-4 shrink-0 text-neon" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <path d="m5 12 5 5 9-10" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {g}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
 
       {producto.description && (
-        <section className="mt-12 max-w-3xl">
-          <h2 className="text-xl font-bold">Descripción</h2>
-          <div className="contenido-wp mt-4" dangerouslySetInnerHTML={{ __html: producto.description }} />
+        <section className="mt-16 grid gap-8 lg:grid-cols-[2fr_1fr]" aria-labelledby="t-descripcion">
+          <div>
+            <h2 id="t-descripcion" className="titulo-seccion">Descripción</h2>
+            <div className="contenido-wp mt-6" dangerouslySetInnerHTML={{ __html: producto.description }} />
+          </div>
+          <dl className="panel h-fit divide-y divide-borde p-2 text-sm">
+            {[
+              ['Plataforma', plataforma.nombre],
+              ['Categoría', categoria ? limpiarHtml(categoria.name) : '—'],
+              ['Condición', 'Nuevo'],
+              ['Envío', 'Todo Guatemala'],
+              ['Código', `#${producto.id}`]
+            ].map(([dt, dd]) => (
+              <div key={dt} className="flex justify-between gap-4 px-3 py-2.5">
+                <dt className="text-apagado">{dt}</dt>
+                <dd className="text-right font-medium">{dd}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
       )}
+
+      {categoria && (
+        <Suspense fallback={<div className="mt-16"><CuadriculaCargando cantidad={4} /></div>}>
+          <Relacionados categoria={categoria.slug} excluir={producto.id} />
+        </Suspense>
+      )}
     </>
+  );
+}
+
+/** "También te puede interesar": otros productos de la misma categoría (desde la caché). */
+async function Relacionados({ categoria, excluir }: { categoria: string; excluir: number }) {
+  const productos = await getProductos({ categoria, porPagina: 5, orden: 'popularity' })
+    .then((r) => r.productos.filter((p) => p.id !== excluir).slice(0, 4))
+    .catch(() => []);
+  if (productos.length === 0) return null;
+
+  return (
+    <section className="mt-16" aria-labelledby="t-relacionados">
+      <h2 id="t-relacionados" className="titulo-seccion">También te puede interesar</h2>
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {productos.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+      </div>
+    </section>
   );
 }
 

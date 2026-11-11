@@ -18,8 +18,9 @@ arquitectura **headless**:
 
 | Área | Detalle |
 |---|---|
-| Catálogo | 42 productos, categorías en dos niveles (consola / tipo de accesorio), búsqueda, orden por novedad, precio o ventas, paginación |
-| Variaciones | Ediciones (Estándar, Steelbook, Coleccionista) y colores, cada una con su precio y stock |
+| Catálogo | 84 productos: 47 videojuegos, 6 consolas, 28 accesorios y 3 tarjetas de regalo; categorías en dos niveles, búsqueda, filtro de ofertas, orden por novedad, precio o ventas, paginación |
+| Variaciones | Edición (Estándar, Steelbook, Coleccionista), color, modelo de consola y monto de tarjeta, cada una con su precio y stock |
+| Diseño | Identidad propia "gamer premium": tema oscuro, tipografía display (Chakra Petch), sistema de diseño con tokens semánticos en `globals.css`, portadas generadas por plataforma, accesible (contraste, foco visible, `prefers-reduced-motion`) |
 | Fotos | Galería por producto optimizada con `next/image` (AVIF/WebP); si no hay foto, portada generada por plataforma |
 | Carrito | Basado en el `Cart-Token` de WooCommerce, en cookie `httpOnly` |
 | Checkout | Validación en servidor con Zod, departamentos de Guatemala, envío gratis desde Q500 |
@@ -28,7 +29,7 @@ arquitectura **headless**:
 | Monedas | Quetzales + equivalente en US$ (servicio web del Banguat, caché de 1 h, valor de respaldo) |
 | SEO | `sitemap.xml`, `robots.txt`, Open Graph, URL canónica, datos estructurados `schema.org/Product` |
 | Seguridad | CSP, HSTS, X-Frame-Options, firmas HMAC/Svix, claves solo en servidor, variables validadas |
-| Calidad | 43 pruebas unitarias (Vitest), pruebas PHP, lint, TypeScript estricto, CI en GitHub Actions |
+| Calidad | 44 pruebas unitarias (Vitest), pruebas PHP, lint, TypeScript estricto, CI en GitHub Actions |
 
 ## Arquitectura
 
