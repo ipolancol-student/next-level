@@ -1,6 +1,6 @@
 # Next Level — e-commerce headless de videojuegos
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+[![CI](https://github.com/ipolancol-student/next-level/actions/workflows/ci.yml/badge.svg)](https://github.com/ipolancol-student/next-level/actions/workflows/ci.yml)
 
 Proyecto de Seminario de Final de Curso. **Next Level** es una tienda en línea de **videojuegos
 físicos y accesorios para consola** (PlayStation, Xbox y Nintendo) en Guatemala, construida con
