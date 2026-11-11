@@ -1,0 +1,72 @@
+# Integración continua: cada push y pull request se verifica automáticamente.
+# Si algo falla, GitHub marca el commit con ✘ y Vercel no debería publicarse.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Si llegan dos pushes seguidos, se cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # En CI no hay WordPress: el build no debe depender de él.
+      WP_URL: http://127.0.0.1:9
+      SITE_URL: https://next-level.example
+      REVALIDATE_SECRET: ci-secreto-de-prueba-123456
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Tipos (TypeScript)
+        run: npm run typecheck
+
+      - name: Pruebas unitarias (Vitest)
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
+
+  wordpress:
+    name: WordPress (sintaxis PHP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: none
+
+      - name: php -l en los plugins del proyecto
+        run: |
+          for archivo in wordpress/*.php wordpress/pruebas/*.php; do
+            php -l "$archivo"
+          done
