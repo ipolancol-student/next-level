@@ -63,7 +63,7 @@ async function ContenidoCarrito({ searchParams }: { searchParams: Busqueda }) {
                       <p className="font-medium">{limpiarHtml(item.name)}</p>
                       {item.variation.length > 0 && (
                         <p className="mt-0.5 font-display text-xs font-semibold uppercase tracking-wider text-neon">
-                          {item.variation.map((v) => `${v.attribute}: ${v.value}`).join(' · ')}
+                          {item.variation.map((v) => `${v.attribute.charAt(0).toUpperCase()}${v.attribute.slice(1)}: ${v.value}`).join(' · ')}
                         </p>
                       )}
                       <p className="mt-1 text-sm text-apagado">{formatearPrecio(item.prices.price, item.prices)} c/u</p>

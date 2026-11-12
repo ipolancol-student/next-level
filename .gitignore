@@ -5,3 +5,6 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Fotos de productos (pesadas y con posibles derechos de autor: no van al repositorio)
+fotos-productos/

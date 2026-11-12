@@ -4,11 +4,12 @@ import { categoriaPrincipal, limpiarHtml, tipoDeProducto } from '@/lib/producto'
 import { Portada } from './Portada';
 import { Precio } from './Precio';
 
+// Claves en minúsculas: WooCommerce puede devolver "Color" o "color" según cómo se creó el atributo.
 const NOMBRE_OPCIONES: Record<string, string> = {
-  Edición: 'ediciones',
-  Color: 'colores',
-  Modelo: 'modelos',
-  Monto: 'montos'
+  edición: 'ediciones',
+  color: 'colores',
+  modelo: 'modelos',
+  monto: 'montos'
 };
 
 /** Descuento en porcentaje (redondeado) de un producto simple en oferta. */
@@ -52,7 +53,7 @@ export function TarjetaProducto({ producto, prioridad = false }: { producto: Pro
         <h3 className="font-sans font-medium leading-snug text-texto transition group-hover:text-white">{limpiarHtml(producto.name)}</h3>
         {variable && (
           <span className="text-xs font-medium text-neon">
-            {producto.variations.length} {NOMBRE_OPCIONES[atributo] ?? 'opciones'} disponibles
+            {producto.variations.length} {NOMBRE_OPCIONES[atributo.toLowerCase()] ?? 'opciones'} disponibles
           </span>
         )}
         <Precio

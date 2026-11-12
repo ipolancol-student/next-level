@@ -30,17 +30,22 @@ export function Portada({ producto, grande = false, prioridad = false, className
   const nombre = limpiarHtml(producto.name);
 
   if (imagen) {
+    // Carátulas de juegos (verticales): llenan el marco. Consolas, accesorios y tarjetas son
+    // fotos de producto con fondo blanco y formas variadas: se muestran completas, sin recortar.
+    const caratula = tipoDeProducto(producto) === 'juego';
     // next/image genera versiones WebP/AVIF del tamaño justo para cada pantalla.
     // El contenedor del componente debe ser `relative` y tener tamaño.
     return (
-      <Image
-        src={imagen.src}
-        alt={imagen.alt || nombre}
-        fill
-        sizes={grande ? '(min-width: 768px) 50vw, 100vw' : '(min-width: 1024px) 25vw, 50vw'}
-        preload={prioridad}
-        className={`object-cover ${className}`}
-      />
+      <div className={`absolute inset-0 ${caratula ? '' : 'bg-white'}`}>
+        <Image
+          src={imagen.src}
+          alt={imagen.alt || nombre}
+          fill
+          sizes={grande ? '(min-width: 768px) 50vw, 100vw' : '(min-width: 1024px) 25vw, 50vw'}
+          preload={prioridad}
+          className={`${caratula ? 'object-cover' : 'object-contain p-[8%]'} ${className}`}
+        />
+      </div>
     );
   }
 

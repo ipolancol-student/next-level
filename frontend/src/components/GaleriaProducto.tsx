@@ -15,7 +15,9 @@ interface Props {
 export function GaleriaProducto({ imagenes, nombre, formato = 'vertical', children }: Props) {
   const [activa, setActiva] = useState(0);
   const proporcion = formato === 'vertical' ? 'aspect-[3/4] max-h-[42rem]' : 'aspect-[4/3]';
-  const marco = `relative overflow-hidden rounded-3xl border border-borde bg-superficie ${proporcion}`;
+  // Las fotos de producto (consolas, accesorios) vienen con fondo blanco: el marco también.
+  const fondo = formato === 'vertical' ? 'bg-superficie' : 'bg-white';
+  const marco = `relative overflow-hidden rounded-3xl border border-borde ${fondo} ${proporcion}`;
 
   if (imagenes.length === 0) {
     return <div className={marco}>{children}</div>;
