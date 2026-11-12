@@ -75,6 +75,7 @@ arquitectura **headless**:
 ├── .github/workflows/ci.yml       ← CI: lint, tipos, pruebas, build y sintaxis PHP
 ├── docs/
 │   ├── costos-y-justificacion.md  ← herramientas, costos y por qué (para el informe)
+│   ├── arquitectura-y-datos.md    ← cumplimiento de la arquitectura, dónde vive cada dato y rendimiento
 │   └── despliegue.md              ← GitHub, Vercel, Cloudflare Tunnel y Recurrente paso a paso
 ├── wordpress/
 │   ├── GUIA-WORDPRESS.md          ← instalación del backend
@@ -115,6 +116,7 @@ npm run dev                  # http://localhost:3000
 | `npm test` | Pruebas unitarias (Vitest) |
 | `npm run verificar` | Lint + tipos + pruebas (lo mismo que la CI) |
 | `npm run build` | Build de producción |
+| `npm run calentar` | Llena la caché visitando todas las páginas del sitemap (antes de una presentación) |
 
 **Tarjetas de prueba de Recurrente:** `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002`
 (rechazada), con cualquier fecha futura y CVC de 3 dígitos.

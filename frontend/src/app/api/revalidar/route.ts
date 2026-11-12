@@ -37,10 +37,12 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
 
-  // expire: 0 → la siguiente visita ya pide datos frescos a WordPress. En una tienda
-  // no conviene mostrar un precio o stock viejo mientras se regenera.
+  // "max" = stale-while-revalidate: la siguiente visita recibe al instante la versión
+  // anterior y Next.js pide la nueva a WordPress en segundo plano. Así ningún visitante
+  // espera los segundos que tarda WordPress. El stock real lo vuelve a validar
+  // WooCommerce al añadir al carrito y al pagar, por lo que no hay sobreventa.
   for (const etiqueta of new Set(datos.etiquetas)) {
-    revalidateTag(etiqueta, { expire: 0 });
+    revalidateTag(etiqueta, 'max');
   }
   return Response.json({ revalidado: datos.etiquetas, fecha: new Date().toISOString() });
 }

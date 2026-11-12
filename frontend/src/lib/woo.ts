@@ -7,13 +7,18 @@
  * - El CATÁLOGO se guarda en caché ('use cache' + etiqueta "catalogo"). WordPress
  *   avisa a /api/revalidar cuando cambia un producto o su stock y la caché se
  *   invalida al instante (ver tienda-headless.php).
- * - El CARRITO nunca se guarda en caché: es de cada visitante y se identifica con
- *   el "Cart-Token" de WooCommerce, guardado en una cookie httpOnly.
+ * - El CARRITO es de cada visitante y se identifica con el "Cart-Token" de WooCommerce
+ *   (cookie httpOnly). Nunca va a la caché compartida; solo a una caché en memoria de
+ *   60 s por token (cacheCarrito.ts) para no pedirlo dos veces seguidas.
  */
 import { cookies } from 'next/headers';
+import { after } from 'next/server';
 import { cacheLife, cacheTag } from 'next/cache';
 import { env } from './env';
 import { limpiarHtml } from './producto';
+import {
+  borrarCarrito, guardarCarrito, leerCarrito, guardarTokenLibre, tomarTokenLibre, tokensLibres, RESERVA_MAXIMA
+} from './cacheCarrito';
 import type { Carrito, Categoria, DatosCliente, EstadoPedido, Producto, ResultadoCheckout } from './tipos';
 
 export * from './tipos';
@@ -21,6 +26,8 @@ export { formatearPrecio } from './dinero';
 export { limpiarHtml, plataformaDe, categoriaPrincipal, esVideojuego, NOMBRES_PAGO } from './producto';
 
 const CART_COOKIE = 'cart_token';
+/** Cantidad de productos del carrito: el contador del encabezado la lee sin llamar a WordPress. */
+export const COOKIE_CANTIDAD = 'cart_count';
 const TIEMPO_MAXIMO_MS = 15000;
 
 export const ETIQUETA_CATALOGO = 'catalogo';
@@ -62,9 +69,11 @@ async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = 
   let token = almacen?.get(CART_COOKIE)?.value;
 
   // WooCommerce exige un "nonce" de seguridad en los POST... salvo que lleven un Cart-Token.
-  // Si el visitante todavía no tiene carrito, primero pedimos uno con un GET.
+  // Si el visitante todavía no tiene carrito, se usa una sesión de la reserva (instantáneo)
+  // o, si no hay, se crea una con un GET.
   if (conCarrito && method === 'POST' && !token) {
-    token = await crearCartToken();
+    token = tomarTokenLibre() ?? (await crearCartToken());
+    reponerReserva();
   }
   if (token) headers['Cart-Token'] = token;
 
@@ -113,11 +122,43 @@ async function storeFetch<T>(ruta: string, { method = 'GET', body, conCarrito = 
     throw new WooError(limpiarHtml(mensaje ?? `Error ${res.status}`), res.status);
   }
 
+  // Toda respuesta de /cart* trae el carrito completo y actualizado: se reutiliza.
+  if (conCarrito && nuevoToken && ruta.startsWith('/cart')) {
+    const carrito = datos as Carrito;
+    guardarCarrito(nuevoToken, carrito);
+    try {
+      almacen!.set(COOKIE_CANTIDAD, String(carrito.items_count ?? 0), {
+        path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 48
+      });
+    } catch {
+      /* Server Component: no puede escribir cookies */
+    }
+  }
+
   return {
     datos: datos as T,
     totalPaginas: Number(res.headers.get('X-WP-TotalPages') ?? 1),
     total: Number(res.headers.get('X-WP-Total') ?? 0)
   };
+}
+
+/**
+ * Repone la reserva de sesiones de carrito DESPUÉS de responder al visitante
+ * (after() de Next.js), para que nadie espere esa llamada.
+ */
+export function reponerReserva() {
+  if (tokensLibres() >= RESERVA_MAXIMA) return;
+  try {
+    after(async () => {
+      while (tokensLibres() < RESERVA_MAXIMA) {
+        const nuevo = await crearCartToken();
+        if (!nuevo) break; // WordPress no responde: se reintentará en otra petición
+        guardarTokenLibre(nuevo);
+      }
+    });
+  } catch {
+    /* fuera de una petición (pruebas): no hay nada que reponer */
+  }
 }
 
 /** Pide un carrito vacío a WooCommerce y devuelve su Cart-Token. */
@@ -140,7 +181,9 @@ async function crearCartToken() {
 async function catalogoFetch<T>(ruta: string) {
   'use cache';
   cacheTag(ETIQUETA_CATALOGO);
-  cacheLife('hours');
+  // Vida larga: los cambios no esperan a que venza, WordPress avisa a /api/revalidar y
+  // la caché se refresca en segundo plano (stale-while-revalidate).
+  cacheLife('days');
   return storeFetch<T>(ruta);
 }
 
@@ -180,12 +223,13 @@ export async function getProducto(slug: string) {
   return datos[0] ?? null;
 }
 
-/** Detalle de cada variación (precio, stock) de un producto variable. */
-export async function getVariaciones(producto: Pick<Producto, 'variations'>) {
-  const respuestas = await Promise.all(
-    producto.variations.map((v) => catalogoFetch<Producto>(`/products/${v.id}`))
+/** Detalle de todas las variaciones (precio, stock) de un producto variable, en UNA llamada. */
+export async function getVariaciones(producto: Pick<Producto, 'id' | 'variations'>) {
+  if (producto.variations.length === 0) return [];
+  const { datos } = await catalogoFetch<Producto[]>(
+    `/products?type=variation&parent=${producto.id}&per_page=100`
   );
-  return respuestas.map((r) => r.datos);
+  return datos;
 }
 
 export async function getCategorias() {
@@ -209,7 +253,10 @@ export async function getTodosLosProductos() {
 
 /** Devuelve el carrito del visitante, o null si todavía no tiene uno. */
 export async function getCarritoSiExiste() {
-  if (!(await cookies()).has(CART_COOKIE)) return null;
+  const token = (await cookies()).get(CART_COOKIE)?.value;
+  if (!token) return null;
+  const reciente = leerCarrito(token);
+  if (reciente) return reciente; // lo acaba de devolver WordPress al añadir/cambiar algo
   try {
     const { datos } = await storeFetch<Carrito>('/cart', { conCarrito: true });
     return datos;
@@ -265,7 +312,11 @@ export async function realizarPedido(cliente: DatosCliente, metodoPago: string, 
     }
   });
   // El pedido ya existe; empezamos un carrito nuevo.
-  (await cookies()).delete(CART_COOKIE);
+  const almacen = await cookies();
+  const token = almacen.get(CART_COOKIE)?.value;
+  if (token) borrarCarrito(token);
+  almacen.delete(CART_COOKIE);
+  almacen.delete(COOKIE_CANTIDAD);
   return datos;
 }
 

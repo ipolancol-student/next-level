@@ -9,6 +9,7 @@ try {
 } catch {
   wordpress = null;
 }
+const wordpressLocal = ['localhost', '127.0.0.1', '[::1]'].includes(wordpress?.hostname ?? '');
 
 /**
  * Política de seguridad de contenido (CSP): qué puede cargar el navegador y desde dónde.
@@ -59,8 +60,10 @@ const nextConfig: NextConfig = {
         ]
       : [],
     formats: ['image/avif', 'image/webp'],
-    // En desarrollo WordPress está en localhost; Next 16 bloquea IPs locales por seguridad (SSRF).
-    dangerouslyAllowLocalIP: esDesarrollo
+    // Next 16 bloquea por seguridad (SSRF) optimizar imágenes de IPs locales. Se permite solo
+    // cuando el propio WordPress está en esta máquina (WordPress Studio en localhost); el
+    // riesgo queda acotado porque remotePatterns solo deja pasar /wp-content/uploads de ese host.
+    dangerouslyAllowLocalIP: esDesarrollo || wordpressLocal
   },
 
   async headers() {

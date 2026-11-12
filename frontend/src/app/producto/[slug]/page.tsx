@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProducto, getProductos, getVariaciones, type Producto } from '@/lib/woo';
+import { getProducto, getProductos, getVariaciones, reponerReserva, type Producto } from '@/lib/woo';
 import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion, textoStock, tipoDeProducto } from '@/lib/producto';
 import { formatearPrecio, aDolares } from '@/lib/dinero';
 import { getTipoCambio } from '@/lib/tipoCambio';
@@ -57,6 +57,9 @@ const GARANTIAS = [
 
 async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // Quien ve un producto suele añadirlo: se prepara una sesión de carrito en segundo plano
+  // (después de responder) para que el primer "Añadir" no espere a WordPress.
+  reponerReserva();
 
   let producto: Producto | null;
   let variaciones: Producto[] = [];

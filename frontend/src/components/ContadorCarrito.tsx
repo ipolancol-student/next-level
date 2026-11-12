@@ -1,9 +1,15 @@
 import Link from 'next/link';
-import { getCarritoSiExiste } from '@/lib/woo';
+import { cookies } from 'next/headers';
+import { COOKIE_CANTIDAD } from '@/lib/woo';
 
+/**
+ * Contador del carrito en el encabezado. Lee la cantidad de una cookie que se actualiza
+ * cada vez que el carrito cambia: así ninguna página espera a WordPress solo para
+ * mostrar este número.
+ */
 export async function ContadorCarrito() {
-  const carrito = await getCarritoSiExiste();
-  const cantidad = carrito?.items_count ?? 0;
+  const valor = Number((await cookies()).get(COOKIE_CANTIDAD)?.value);
+  const cantidad = Number.isInteger(valor) && valor > 0 ? valor : 0;
 
   return (
     <Link

@@ -12,7 +12,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "verificar": "npm run lint && npm run typecheck && npm test",
     "fotos:pagina": "node scripts/pagina-buscar-fotos.mjs",
-    "fotos": "node scripts/preparar-fotos.mjs"
+    "fotos": "node scripts/preparar-fotos.mjs",
+    "calentar": "node scripts/calentar-cache.mjs"
   },
   "dependencies": {
     "next": "16.4.6",

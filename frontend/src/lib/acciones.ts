@@ -5,7 +5,7 @@
  * estas funciones y Next.js se encarga del resto.
  */
 import { redirect } from 'next/navigation';
-import { refresh, updateTag } from 'next/cache';
+import { refresh, revalidateTag } from 'next/cache';
 import { agregarAlCarrito, actualizarItem, quitarItem, realizarPedido, ETIQUETA_CATALOGO } from './woo';
 import { esquemaCheckout, erroresPorCampo } from './validacion';
 
@@ -92,8 +92,9 @@ export async function checkoutAction(_prev: EstadoFormulario, form: FormData): P
     return { error: mensajeDe(e, 'No se pudo crear el pedido'), valores };
   }
 
-  // 3. El stock cambió: el catálogo en caché deja de ser válido para todos.
-  updateTag(ETIQUETA_CATALOGO);
+  // 3. El stock cambió: el catálogo se refresca en segundo plano (stale-while-revalidate),
+  //    sin hacer esperar al cliente. WooCommerce valida el stock real en cada compra.
+  revalidateTag(ETIQUETA_CATALOGO, 'max');
 
   // redirect() funciona lanzando una excepción especial: va fuera del try/catch.
   redirect(destino);
