@@ -118,6 +118,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
                 <li>Productos nuevos y sellados</li>
                 <li>Garantía de 30 días contra defectos</li>
                 <li>Consulta tu pedido con su enlace privado</li>
+                <li className="pt-2">
+                  <Link href="/terminos-y-condiciones" className="hover:text-texto">Términos y condiciones</Link>
+                </li>
+                <li>
+                  <Link href="/politica-de-privacidad" className="hover:text-texto">Política de privacidad</Link>
+                </li>
               </ul>
             </div>
             <div>

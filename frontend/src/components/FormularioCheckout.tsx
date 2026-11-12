@@ -201,7 +201,13 @@ export function FormularioCheckout({ paisPorDefecto, metodos, lineas, envio, tot
         >
           {enviando ? 'Procesando…' : metodo === 'recurrente' ? 'Pagar con tarjeta' : 'Confirmar pedido'}
         </button>
-        <p className="mt-4 text-center text-xs text-apagado">Se cobra en quetzales · Proyecto académico: no se cobra dinero real.</p>
+        <p className="mt-4 text-center text-xs text-apagado">
+          Al confirmar aceptas los{' '}
+          <a href="/terminos-y-condiciones" target="_blank" className="text-tenue underline hover:text-texto">Términos y condiciones</a>{' '}
+          y la{' '}
+          <a href="/politica-de-privacidad" target="_blank" className="text-tenue underline hover:text-texto">Política de privacidad</a>.
+          Se cobra en quetzales.
+        </p>
       </aside>
     </form>
   );
