@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { getProducto, getProductos, getVariaciones, reponerReserva, type Producto } from '@/lib/woo';
 import { limpiarHtml, categoriaPrincipal, plataformaDe, opcionesDeVariacion, textoStock, tipoDeProducto } from '@/lib/producto';
 import { formatearPrecio, aDolares } from '@/lib/dinero';
@@ -59,6 +60,9 @@ async function DetalleProducto({ params }: { params: Promise<{ slug: string }> }
   const { slug } = await params;
   // Quien ve un producto suele añadirlo: se prepara una sesión de carrito en segundo plano
   // (después de responder) para que el primer "Añadir" no espere a WordPress.
+  // connection(): esto solo ocurre en una visita real, no al prerenderizar la página
+  // (la reserva usa la hora actual para descartar sesiones vencidas).
+  await connection();
   reponerReserva();
 
   let producto: Producto | null;
