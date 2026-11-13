@@ -42,3 +42,7 @@ next-env.d.ts
 
 # el ejemplo sí se sube a git
 !.env.example
+
+
+# Vercel CLI
+.vercel

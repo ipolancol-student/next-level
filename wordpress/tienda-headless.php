@@ -120,6 +120,17 @@ if ($nextlevel_host = nextlevel_host_publico()) {
     $nextlevel_origen = 'https://' . $nextlevel_host;
     add_filter('option_home', fn() => $nextlevel_origen);
     add_filter('option_siteurl', fn() => $nextlevel_origen);
+
+    // WordPress calcula la URL de wp-content ANTES de cargar los plugins (constante
+    // WP_CONTENT_URL), así que las fotos seguirían apuntando a localhost: se corrigen aquí.
+    $nextlevel_a_publico = fn(string $url) => preg_replace('#^https?://[^/]+#', $nextlevel_origen, $url);
+    add_filter('upload_dir', function (array $dirs) use ($nextlevel_a_publico) {
+        $dirs['url'] = $nextlevel_a_publico($dirs['url']);
+        $dirs['baseurl'] = $nextlevel_a_publico($dirs['baseurl']);
+        return $dirs;
+    });
+    add_filter('content_url', $nextlevel_a_publico);
+    add_filter('plugins_url', $nextlevel_a_publico);
 }
 
 /* ====================================================================== */
